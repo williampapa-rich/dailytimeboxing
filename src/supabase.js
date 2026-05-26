@@ -18,17 +18,25 @@ function getRedirectTo() {
 }
 
 export async function linkGoogleIdentity() {
-  return supabase.auth.linkIdentity({
+  const result = await supabase.auth.linkIdentity({
     provider: 'google',
-    options: { redirectTo: getRedirectTo() },
+    options: { redirectTo: getRedirectTo(), skipBrowserRedirect: true },
   });
+  if (result.data?.url) {
+    window.location.href = result.data.url;
+  }
+  return result;
 }
 
 export async function signInWithGoogle() {
-  return supabase.auth.signInWithOAuth({
+  const result = await supabase.auth.signInWithOAuth({
     provider: 'google',
-    options: { redirectTo: getRedirectTo() },
+    options: { redirectTo: getRedirectTo(), skipBrowserRedirect: true },
   });
+  if (result.data?.url) {
+    window.location.href = result.data.url;
+  }
+  return result;
 }
 
 export async function signOut() {
