@@ -288,6 +288,13 @@ export async function initPlayer() {
 
 export function getDeviceId() { return deviceIdValue; }
 
+export async function sdkActivate() {
+  if (!playerInstance) return;
+  if (typeof playerInstance.activateElement === 'function') {
+    try { await playerInstance.activateElement(); } catch (e) {}
+  }
+}
+
 export async function sdkResume() {
   if (!playerInstance) return;
   await playerInstance.resume();

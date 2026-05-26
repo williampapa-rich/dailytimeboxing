@@ -252,6 +252,8 @@ export default function MusicPlayer() {
   const togglePlay = async () => {
     try {
       if (activeTab === 'spotify') {
+        // Safari/iOS autoplay 우회 — 반드시 사용자 제스처 안에서 호출
+        await spotify.sdkActivate();
         if (playing) {
           await spotify.sdkPause();
         } else {
@@ -260,20 +262,23 @@ export default function MusicPlayer() {
           if (state) {
             await spotify.sdkResume();
           } else {
-            // SDK가 아직 컨텍스트 없음 → transfer + HTTP resume + SDK가 컨텍스트 잡을 때까지 폴링
+            console.log('[firstPlay] no SDK state, transfer+resume');
+            try { await spotify.sdkResume(); console.log('[firstPlay] preflight sdkResume ok'); } catch (e) { console.warn('[firstPlay] preflight sdkResume err', e); }
             await ensureSpotifyDevice(true);
-            try { await spotify.resume(deviceIdRef.current); } catch (e) {}
-            // SDK가 state를 잡으면 한 번 더 sdkResume — paused 상태로 멈춘 경우 복구
-            for (let i = 0; i < 10; i++) {
-              await new Promise(r => setTimeout(r, 200));
+            console.log('[firstPlay] transfer done');
+            try { await spotify.resume(deviceIdRef.current); console.log('[firstPlay] http resume ok'); } catch (e) { console.warn('[firstPlay] http resume err', e); }
+            for (let i = 0; i < 15; i++) {
+              await new Promise(r => setTimeout(r, 300));
               const s = await spotify.getSdkState();
+              console.log('[firstPlay] poll', i, s ? { paused: s.paused, position: s.position, track: s.track_window?.current_track?.name } : 'no state');
               if (s) {
                 if (s.paused) {
-                  try { await spotify.sdkResume(); } catch (e) {}
+                  try { await spotify.sdkResume(); console.log('[firstPlay] retry sdkResume ok'); } catch (e) { console.warn('[firstPlay] retry sdkResume err', e); }
                 }
                 break;
               }
             }
+            console.log('[firstPlay] done');
           }
         }
       } else if (activeTab === 'youtube') {
