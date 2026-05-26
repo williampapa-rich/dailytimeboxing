@@ -256,9 +256,10 @@ export default function MusicPlayer() {
           await spotify.pause(deviceIdRef.current);
         } else {
           await stopOtherProvider('spotify');
+          // 토큰 명시적 갱신
+          await spotify.getValidToken();
           await ensureSpotifyDevice(true);
-          // transfer 후 명시적 resume — Spotify가 일부 케이스에서 transfer만으론 재생 안 함
-          try { await spotify.resume(deviceIdRef.current); } catch (e) {}
+          try { await spotify.resume(deviceIdRef.current); } catch (e) { console.warn('[spotify resume]', e); }
         }
       } else if (activeTab === 'youtube') {
         if (playing) {
