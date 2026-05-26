@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Settings, X, Palette, Clock, BarChart3, User, HelpCircle, LogOut } from 'lucide-react';
+import { X, Palette, Clock, BarChart3, User, HelpCircle, LogOut } from 'lucide-react';
 import { useAuthUser } from './auth.js';
 import { signInWithGoogle, signOut } from './supabase.js';
 
@@ -20,8 +20,7 @@ const MENU = [
   { key: 'support', icon: HelpCircle, label: '지원' },
 ];
 
-export default function SettingsPanel({ C }) {
-  const [isOpen, setIsOpen] = useState(false);
+export default function SettingsPanel({ isOpen, onClose }) {
   const [activeSection, setActiveSection] = useState('account');
   const [busy, setBusy] = useState(false);
   const innerRef = useRef(null);
@@ -30,10 +29,10 @@ export default function SettingsPanel({ C }) {
   const isLoggedIn = loaded && user && !isAnonymous;
 
   useEffect(() => {
-    const onKey = (e) => { if (e.key === 'Escape') setIsOpen(false); };
+    const onKey = (e) => { if (e.key === 'Escape') onClose(); };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, []);
+  }, [onClose]);
 
   const onGoogleSignIn = async () => {
     setBusy(true);
@@ -50,23 +49,9 @@ export default function SettingsPanel({ C }) {
 
   return (
     <>
-      {/* Settings trigger — in header */}
-      <button
-        onClick={() => setIsOpen(true)}
-        title="설정"
-        style={{
-          display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-          width: 32, height: 32, borderRadius: 8,
-          border: `1px solid ${C.border}`, backgroundColor: C.card, color: C.textMid,
-          cursor: 'pointer', transition: 'all 0.15s',
-        }}
-      >
-        <Settings size={15} />
-      </button>
-
       {/* Backdrop */}
       <div
-        onClick={() => setIsOpen(false)}
+        onClick={() => onClose()}
         style={{
           position: 'fixed', inset: 0, zIndex: 100,
           background: 'rgba(0,0,0,0.5)',
@@ -205,7 +190,7 @@ export default function SettingsPanel({ C }) {
           <section style={{ padding: '24px 32px', overflowY: 'auto', position: 'relative' }}>
             {/* Close button */}
             <button
-              onClick={() => setIsOpen(false)}
+              onClick={() => onClose()}
               style={{
                 position: 'absolute', top: 12, right: 12,
                 width: 28, height: 28, borderRadius: 6,

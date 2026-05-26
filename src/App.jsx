@@ -1,5 +1,6 @@
 import { useState, useEffect, useLayoutEffect, useRef, useCallback } from "react";
 import { Pencil, Eye, Trash2, Plus, Clock, Save, Check, X, Sun, Moon, ChevronLeft, ChevronRight, Calendar } from "lucide-react";
+import { Settings } from 'lucide-react';
 import SettingsPanel from "./SettingsPanel.jsx";
 import MusicPlayer from "./MusicPlayer.jsx";
 
@@ -162,6 +163,7 @@ const getTimerInfo = (boxes) => {
 export default function App() {
   const [mode, setMode] = useState('view');
   const [theme, setTheme] = useState('light');
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState(() => new Date());
   const [boxes, setBoxes] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -800,7 +802,6 @@ export default function App() {
                   뷰
                 </button>
               </div>
-              <SettingsPanel C={C} />
             </div>
           </div>
           {/* Date navigation - separate row */}
@@ -920,6 +921,22 @@ export default function App() {
         )}
       </div>
       <MusicPlayer />
+      {/* Settings button — fixed, right of music button */}
+      <button
+        onClick={() => setSettingsOpen(true)}
+        title="설정"
+        style={{
+          position: 'fixed', bottom: 20, right: 76, zIndex: 51,
+          width: 48, height: 48, borderRadius: 999,
+          border: 'none', cursor: 'pointer',
+          backgroundColor: '#1a1a1a', color: '#fff',
+          boxShadow: '0 4px 20px rgba(0,0,0,0.35)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}
+      >
+        <Settings size={20} />
+      </button>
+      <SettingsPanel isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} />
     </div>
   );
 }
