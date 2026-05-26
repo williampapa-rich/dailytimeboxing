@@ -32,9 +32,7 @@ export default function AuthButton({ C }) {
     try {
       const { error } = await linkGoogleIdentity();
       if (error) {
-        if (/already|exists/i.test(error.message)) {
-          await signInWithGoogle();
-        } else throw error;
+        await signInWithGoogle();
       }
     } catch (e) {
       setErr(e.message || String(e));
