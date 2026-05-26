@@ -13,6 +13,33 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
 
 let cachedUserId = null;
 
+function getRedirectTo() {
+  return window.location.origin + window.location.pathname;
+}
+
+export async function linkGoogleIdentity() {
+  return supabase.auth.linkIdentity({
+    provider: 'google',
+    options: { redirectTo: getRedirectTo() },
+  });
+}
+
+export async function signInWithGoogle() {
+  return supabase.auth.signInWithOAuth({
+    provider: 'google',
+    options: { redirectTo: getRedirectTo() },
+  });
+}
+
+export async function signOut() {
+  cachedUserId = null;
+  return supabase.auth.signOut();
+}
+
+export function onAuthChange(cb) {
+  return supabase.auth.onAuthStateChange(cb);
+}
+
 export async function ensureSession() {
   const { data: { session } } = await supabase.auth.getSession();
   if (session?.user) {
