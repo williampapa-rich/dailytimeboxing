@@ -2,6 +2,7 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App.jsx';
 import { ensureSession, cloudStorage } from './supabase.js';
+import * as spotify from './providers/spotify.js';
 
 window.storage = cloudStorage;
 
@@ -21,9 +22,28 @@ function Loading({ msg }) {
 
 root.render(<Loading msg="연결 중..." />);
 
-ensureSession()
-  .then(() => root.render(<App />))
-  .catch((err) => {
+async function handleOAuthCallbacks() {
+  const params = new URLSearchParams(window.location.search);
+  const state = params.get('state') || '';
+  const code = params.get('code');
+  if (code && state.startsWith('spotify:')) {
+    try {
+      await spotify.handleCallback(code, state);
+    } catch (e) {
+      console.error('[spotify callback]', e);
+    } finally {
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+  }
+}
+
+(async () => {
+  try {
+    await handleOAuthCallbacks();
+    await ensureSession();
+    root.render(<App />);
+  } catch (err) {
     console.error(err);
     root.render(<Loading msg={`연결 실패: ${err.message || err}`} />);
-  });
+  }
+})();

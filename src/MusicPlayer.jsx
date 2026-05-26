@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
-import { Play, Pause, SkipBack, SkipForward, ChevronDown, Minus, Plus } from 'lucide-react';
-import { getConnection } from './providers/tokens.js';
+import { useEffect, useRef, useState } from 'react';
+import { Play, Pause, SkipBack, SkipForward, ChevronDown, Minus, X, RefreshCw, ExternalLink } from 'lucide-react';
+import { getConnection, removeConnection } from './providers/tokens.js';
+import * as spotify from './providers/spotify.js';
 
 const SpotifyIcon = ({ size = 18, color = '#1DB954' }) => (
   <svg width={size} height={size} viewBox="0 0 168 168" aria-hidden="true">
@@ -31,6 +32,17 @@ export default function MusicPlayer() {
   const [activeTab, setActiveTab] = useState('spotify');
   const [collapsed, setCollapsed] = useState(false);
   const [connected, setConnected] = useState({ spotify: false, youtube: false });
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+
+  // Spotify player state
+  const [playlists, setPlaylists] = useState([]);
+  const [playlistDropdownOpen, setPlaylistDropdownOpen] = useState(false);
+  const [selectedPlaylist, setSelectedPlaylist] = useState(null);
+  const [track, setTrack] = useState(null);
+  const [playing, setPlaying] = useState(false);
+  const [premiumRequired, setPremiumRequired] = useState(false);
+  const deviceIdRef = useRef(null);
 
   useEffect(() => {
     const m = window.matchMedia('(max-width: 760px)');
@@ -49,9 +61,83 @@ export default function MusicPlayer() {
     })();
   }, []);
 
+  // Spotify init when connected
+  useEffect(() => {
+    if (!connected.spotify || activeTab !== 'spotify') return;
+    let unsub = null;
+    (async () => {
+      try {
+        setBusy(true);
+        const items = await spotify.listPlaylists();
+        setPlaylists(items);
+        const { deviceId } = await spotify.initPlayer();
+        deviceIdRef.current = deviceId;
+        unsub = spotify.onPlayerState((s) => {
+          if (s?.error?.code === 'premium_required') {
+            setPremiumRequired(true);
+            return;
+          }
+          if (s.track) setTrack(s.track);
+          setPlaying(!!s.playing);
+        });
+      } catch (e) {
+        if (e?.message === 'premium_required') setPremiumRequired(true);
+        else setErr(e.message || String(e));
+      } finally {
+        setBusy(false);
+      }
+    })();
+    return () => { if (unsub) unsub(); };
+  }, [connected.spotify, activeTab]);
+
   if (mobile) return null;
 
   const T = THEMES[activeTab];
+
+  const onConnect = async (provider) => {
+    setErr('');
+    if (provider === 'spotify') {
+      await spotify.beginAuth();
+    } else if (provider === 'youtube') {
+      alert('YouTube 연결은 다음 단계에서 활성화됩니다.');
+    }
+  };
+
+  const onDisconnect = async (provider) => {
+    if (!confirm(`${provider} 연결을 해제할까요?`)) return;
+    await removeConnection(provider);
+    setConnected(c => ({ ...c, [provider]: false }));
+    setPlaylists([]);
+    setSelectedPlaylist(null);
+    setTrack(null);
+    setPlaying(false);
+    setPremiumRequired(false);
+  };
+
+  const onSelectPlaylist = async (pl) => {
+    setPlaylistDropdownOpen(false);
+    setSelectedPlaylist(pl);
+    if (activeTab !== 'spotify') return;
+    if (premiumRequired) {
+      window.open(pl.external_urls?.spotify || `https://open.spotify.com/playlist/${pl.id}`, '_blank');
+      return;
+    }
+    try {
+      await spotify.playPlaylist(pl.id, deviceIdRef.current);
+    } catch (e) {
+      setErr(e.message);
+    }
+  };
+
+  const togglePlay = async () => {
+    try {
+      if (playing) await spotify.pause(deviceIdRef.current);
+      else await spotify.resume(deviceIdRef.current);
+    } catch (e) { setErr(e.message); }
+  };
+
+  const skipNext = async () => { try { await spotify.next(deviceIdRef.current); } catch (e) { setErr(e.message); } };
+  const skipPrev = async () => { try { await spotify.previous(deviceIdRef.current); } catch (e) { setErr(e.message); } };
 
   if (collapsed) {
     return (
@@ -72,15 +158,11 @@ export default function MusicPlayer() {
     );
   }
 
-  const onConnect = (provider) => {
-    alert(`${provider} 연결 기능은 다음 단계에서 활성화됩니다.`);
-  };
-
   return (
     <div
       style={{
         position: 'fixed', bottom: 20, right: 20, zIndex: 50,
-        width: 320, borderRadius: 12, overflow: 'hidden',
+        width: 340, borderRadius: 12, overflow: 'hidden',
         backgroundColor: T.bg, color: T.text,
         border: `1px solid ${T.border}`,
         boxShadow: '0 12px 32px rgba(0,0,0,0.3)',
@@ -114,26 +196,27 @@ export default function MusicPlayer() {
             </button>
           ))}
         </div>
-        <button
-          onClick={() => setCollapsed(true)}
-          title="접기"
-          style={{
-            width: 24, height: 24, borderRadius: 4,
-            border: 'none', backgroundColor: 'transparent',
-            color: T.sub, cursor: 'pointer',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-          }}
-        >
-          <Minus size={14} />
-        </button>
+        <div style={{ display: 'flex', gap: 4 }}>
+          {connected[activeTab] && (
+            <button
+              onClick={() => onDisconnect(activeTab)}
+              title="연결 해제"
+              style={iconBtn(T.sub)}
+            ><X size={13} /></button>
+          )}
+          <button onClick={() => setCollapsed(true)} title="접기" style={iconBtn(T.sub)}>
+            <Minus size={14} />
+          </button>
+        </div>
       </div>
 
       {/* Body */}
       <div style={{ padding: '14px 14px 12px' }}>
         {!connected[activeTab] ? (
           <div style={{ textAlign: 'center', padding: '12px 4px 4px' }}>
-            <div style={{ fontSize: 12, color: T.sub, marginBottom: 12 }}>
-              {activeTab === 'spotify' ? 'Spotify 계정을 연결하면\n내 플레이리스트를 재생할 수 있어요'
+            <div style={{ fontSize: 12, color: T.sub, marginBottom: 12, whiteSpace: 'pre-line' }}>
+              {activeTab === 'spotify'
+                ? 'Spotify 계정을 연결하면\n내 플레이리스트를 재생할 수 있어요'
                 : 'YouTube 계정을 연결하면\n내 플레이리스트를 재생할 수 있어요'}
             </div>
             <button
@@ -151,41 +234,130 @@ export default function MusicPlayer() {
           </div>
         ) : (
           <>
-            {/* Playlist selector (placeholder) */}
-            <button
-              style={{
-                width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                padding: '8px 10px', borderRadius: 6,
-                backgroundColor: '#FFFFFF10', border: `1px solid ${T.border}`,
-                color: T.text, fontSize: 12, fontWeight: 600, cursor: 'pointer',
-                marginBottom: 12,
-              }}
-            >
-              <span style={{ color: T.sub }}>플레이리스트 선택</span>
-              <ChevronDown size={14} color={T.sub} />
-            </button>
+            {/* Playlist selector */}
+            <div style={{ position: 'relative', marginBottom: 12 }}>
+              <button
+                onClick={() => setPlaylistDropdownOpen(v => !v)}
+                style={{
+                  width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  padding: '8px 10px', borderRadius: 6,
+                  backgroundColor: '#FFFFFF10', border: `1px solid ${T.border}`,
+                  color: T.text, fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                }}
+              >
+                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: selectedPlaylist ? T.text : T.sub }}>
+                  {busy ? '불러오는 중...' : (selectedPlaylist?.name || '플레이리스트 선택')}
+                </span>
+                <ChevronDown size={14} color={T.sub} />
+              </button>
+              {playlistDropdownOpen && playlists.length > 0 && (
+                <div style={{
+                  position: 'absolute', bottom: '100%', left: 0, right: 0, marginBottom: 4,
+                  maxHeight: 240, overflowY: 'auto',
+                  backgroundColor: T.bg, border: `1px solid ${T.border}`, borderRadius: 6,
+                  boxShadow: '0 -4px 16px rgba(0,0,0,0.4)', zIndex: 10,
+                }}>
+                  {playlists.map(p => (
+                    <button
+                      key={p.id}
+                      onClick={() => onSelectPlaylist(p)}
+                      style={{
+                        width: '100%', display: 'flex', alignItems: 'center', gap: 8,
+                        padding: '8px 10px', border: 'none', background: 'transparent',
+                        color: T.text, cursor: 'pointer', textAlign: 'left', fontSize: 12,
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#FFFFFF10'}
+                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                    >
+                      {p.images?.[0]?.url && (
+                        <img src={p.images[0].url} alt="" width={24} height={24} style={{ borderRadius: 3, flexShrink: 0 }} />
+                      )}
+                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Premium required notice */}
+            {premiumRequired && (
+              <div style={{
+                fontSize: 11, color: T.sub, marginBottom: 10, padding: 8,
+                backgroundColor: '#FFFFFF08', borderRadius: 6, lineHeight: 1.5,
+              }}>
+                인앱 재생은 Spotify Premium 전용입니다. 플레이리스트를 누르면 Spotify 앱에서 열려요.
+              </div>
+            )}
 
             {/* Now playing */}
-            <div style={{ marginBottom: 14 }}>
-              <div style={{ fontSize: 13, fontWeight: 700, color: T.text, lineHeight: 1.3, marginBottom: 2 }}>
-                재생할 곡 없음
+            <div style={{ marginBottom: 14, display: 'flex', alignItems: 'center', gap: 10 }}>
+              {track?.albumArt && (
+                <img src={track.albumArt} alt="" width={44} height={44} style={{ borderRadius: 4, flexShrink: 0 }} />
+              )}
+              <div style={{ minWidth: 0, flex: 1 }}>
+                <div style={{
+                  fontSize: 13, fontWeight: 700, color: T.text, lineHeight: 1.3,
+                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                }}>
+                  {track?.name || (premiumRequired ? selectedPlaylist?.name : '재생할 곡 없음')}
+                </div>
+                <div style={{ fontSize: 11, color: T.sub, marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {track?.artist || '—'}
+                </div>
               </div>
-              <div style={{ fontSize: 11, color: T.sub }}>—</div>
+              {premiumRequired && selectedPlaylist && (
+                <a
+                  href={selectedPlaylist.external_urls?.spotify || `https://open.spotify.com/playlist/${selectedPlaylist.id}`}
+                  target="_blank" rel="noreferrer"
+                  style={{ color: T.accent, display: 'flex', alignItems: 'center' }}
+                  title="Spotify 앱에서 열기"
+                >
+                  <ExternalLink size={14} />
+                </a>
+              )}
             </div>
 
             {/* Controls */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 18 }}>
-              <button style={ctrlBtn(T.text)} title="이전곡"><SkipBack size={18} /></button>
-              <button style={{ ...ctrlBtn('#000'), backgroundColor: T.accent, width: 40, height: 40 }} title="재생">
-                <Play size={18} fill="#000" />
-              </button>
-              <button style={ctrlBtn(T.text)} title="다음곡"><SkipForward size={18} /></button>
-            </div>
+            {!premiumRequired && (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 18 }}>
+                <button onClick={skipPrev} style={ctrlBtn(T.text)} title="이전곡"><SkipBack size={18} /></button>
+                <button
+                  onClick={togglePlay}
+                  style={{ ...ctrlBtn('#000'), backgroundColor: T.accent, width: 40, height: 40 }}
+                  title={playing ? '일시정지' : '재생'}
+                >
+                  {playing ? <Pause size={18} fill="#000" /> : <Play size={18} fill="#000" />}
+                </button>
+                <button onClick={skipNext} style={ctrlBtn(T.text)} title="다음곡"><SkipForward size={18} /></button>
+              </div>
+            )}
+
+            {err && (
+              <div style={{
+                marginTop: 10, padding: 8, fontSize: 11, color: '#FCA5A5',
+                backgroundColor: 'rgba(248,113,113,0.12)', borderRadius: 6, lineHeight: 1.4,
+              }}>
+                {err}
+                <button
+                  onClick={() => setErr('')}
+                  style={{ float: 'right', background: 'none', border: 'none', color: '#FCA5A5', cursor: 'pointer', padding: 0 }}
+                >×</button>
+              </div>
+            )}
           </>
         )}
       </div>
     </div>
   );
+}
+
+function iconBtn(color) {
+  return {
+    width: 24, height: 24, borderRadius: 4,
+    border: 'none', backgroundColor: 'transparent', color,
+    cursor: 'pointer',
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+  };
 }
 
 function ctrlBtn(color) {
