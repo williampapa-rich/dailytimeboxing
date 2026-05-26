@@ -8,6 +8,7 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
     persistSession: true,
     autoRefreshToken: true,
     storageKey: 'dtb-supabase-auth',
+    detectSessionInUrl: false,
   },
 });
 
@@ -49,6 +50,23 @@ export function onAuthChange(cb) {
 }
 
 export async function ensureSession() {
+  const params = new URLSearchParams(window.location.search);
+  const code = params.get('code');
+  const state = params.get('state') || '';
+  if (code && !state.startsWith('spotify:')) {
+    try {
+      const { data: exchangeData, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+      if (!exchangeError && exchangeData?.session) {
+        cachedUserId = exchangeData.session.user.id;
+        window.history.replaceState({}, '', window.location.pathname);
+        return exchangeData.session;
+      }
+    } catch (e) {
+      console.error('[ensureSession] code exchange failed:', e);
+    }
+    window.history.replaceState({}, '', window.location.pathname);
+  }
+
   const { data: { session } } = await supabase.auth.getSession();
   if (session?.user) {
     cachedUserId = session.user.id;
@@ -58,7 +76,6 @@ export async function ensureSession() {
   if (error) throw error;
   cachedUserId = data.session?.user?.id || data.user?.id || null;
   if (!cachedUserId) throw new Error('익명 로그인 응답에 user id가 없습니다');
-  console.log('[supabase] anonymous user id:', cachedUserId);
   return data.session;
 }
 
