@@ -1,7 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App.jsx';
-import { supabase, ensureSession, cloudStorage, signInWithGoogle } from './supabase.js';
+import { ensureSession, cloudStorage } from './supabase.js';
 import * as spotify from './providers/spotify.js';
 import * as youtube from './providers/youtube.js';
 
@@ -26,11 +26,8 @@ root.render(<Loading msg="연결 중..." />);
 async function handleOAuthCallbacks() {
   const params = new URLSearchParams(window.location.search);
 
-  if (params.get('error_code') === 'identity_already_exists') {
-    await supabase.auth.signOut({ scope: 'local' });
+  if (params.get('error_code')) {
     window.history.replaceState({}, '', window.location.pathname);
-    await signInWithGoogle();
-    return;
   }
 
   const state = params.get('state') || '';

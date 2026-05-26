@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { LogIn, LogOut, ChevronDown } from 'lucide-react';
 import { useAuthUser } from './auth.js';
-import { signInWithGoogle, signOut } from './supabase.js';
+import { linkGoogleIdentity, signInWithGoogle, signOut } from './supabase.js';
 
 const GoogleIcon = ({ size = 14 }) => (
   <svg width={size} height={size} viewBox="0 0 48 48" aria-hidden="true">
@@ -30,10 +30,14 @@ export default function AuthButton({ C }) {
   const onConnect = async () => {
     setBusy(true); setErr('');
     try {
-      await signInWithGoogle();
+      const { error } = await linkGoogleIdentity();
+      if (error) {
+        await signOut();
+        await signInWithGoogle();
+      }
     } catch (e) {
       setErr(e.message || String(e));
-      setTimeout(() => setErr(''), 3500);
+      setTimeout(() => setErr(''), 5000);
     } finally { setBusy(false); }
   };
 
