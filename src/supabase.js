@@ -25,7 +25,6 @@ export async function linkGoogleIdentity() {
 }
 
 export async function signInWithGoogle() {
-  await supabase.auth.signOut();
   return supabase.auth.signInWithOAuth({
     provider: 'google',
     options: { redirectTo: getRedirectTo() },
