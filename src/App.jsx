@@ -1,6 +1,6 @@
 import { useState, useEffect, useLayoutEffect, useRef, useCallback } from "react";
 import { Pencil, Eye, Trash2, Plus, Clock, Save, Check, X, Sun, Moon, ChevronLeft, ChevronRight, Calendar } from "lucide-react";
-import AuthButton from "./AuthButton.jsx";
+import SettingsPanel from "./SettingsPanel.jsx";
 import MusicPlayer from "./MusicPlayer.jsx";
 
 const SLOTS_PER_DAY = 48;
@@ -800,7 +800,7 @@ export default function App() {
                   뷰
                 </button>
               </div>
-              <AuthButton C={C} />
+              <SettingsPanel C={C} />
             </div>
           </div>
           {/* Date navigation - separate row */}
