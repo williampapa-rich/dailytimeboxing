@@ -51,6 +51,9 @@ async function handleOAuthCallbacks() {
   try {
     await handleOAuthCallbacks();
     await ensureSession();
+    if (window.location.hash.includes('access_token=') && !window.location.hash.includes('youtube')) {
+      window.history.replaceState({}, '', window.location.pathname);
+    }
     root.render(<App />);
   } catch (err) {
     console.error(err);
