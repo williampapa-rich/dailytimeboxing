@@ -153,6 +153,10 @@ async function api(path, init = {}, token) {
 
 export async function getMe(token) { return api('/v1/me', {}, token); }
 
+export async function getCurrentPlayback() {
+  return api('/v1/me/player');
+}
+
 export async function listPlaylists() {
   const all = [];
   let url = '/v1/me/playlists?limit=50';

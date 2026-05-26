@@ -163,13 +163,42 @@ export default function MusicPlayer() {
     setPremiumRequired(false);
   };
 
-  const ensureSpotifyDevice = async () => {
+  // play=true로 transfer하면 다른 탭/기기는 자동 정지되고 우리 탭에서 이어재생
+  const ensureSpotifyDevice = async (continuePlay = true) => {
     if (!deviceIdRef.current) return;
     try {
-      await spotify.transferPlayback(deviceIdRef.current, false);
-      await new Promise(r => setTimeout(r, 300));
+      await spotify.transferPlayback(deviceIdRef.current, continuePlay);
+      await new Promise(r => setTimeout(r, 400));
     } catch (e) {}
   };
+
+  const syncSpotifyState = async () => {
+    if (activeTab !== 'spotify' || !connected.spotify) return;
+    try {
+      const pb = await spotify.getCurrentPlayback();
+      if (!pb || !pb.item) return;
+      setTrack({
+        name: pb.item.name,
+        artist: (pb.item.artists || []).map(a => a.name).join(', '),
+        albumArt: pb.item.album?.images?.[0]?.url || null,
+        uri: pb.item.uri,
+      });
+      setPlaying(!!pb.is_playing);
+    } catch (e) {}
+  };
+
+  // 탭이 보이게 될 때마다 현재 재생 상태 동기화
+  useEffect(() => {
+    const onVis = () => {
+      if (document.visibilityState === 'visible') syncSpotifyState();
+    };
+    document.addEventListener('visibilitychange', onVis);
+    window.addEventListener('focus', onVis);
+    return () => {
+      document.removeEventListener('visibilitychange', onVis);
+      window.removeEventListener('focus', onVis);
+    };
+  }, [activeTab, connected.spotify]);
 
   // SDK 내부에서 종종 튀어나오는 "string did not match" 같은 무해한 메시지는 무시
   const setSafeErr = (e) => {
