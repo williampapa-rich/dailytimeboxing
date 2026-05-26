@@ -214,8 +214,23 @@ export async function searchTracks(query, limit = 20) {
   const q = (query || '').trim();
   if (!q) return [];
   const lim = Math.max(1, Math.min(50, parseInt(limit, 10) || 20));
-  const url = `/v1/search?q=${encodeURIComponent(q)}&type=track&limit=${lim}`;
-  const data = await api(url);
+  const token = await getValidToken();
+  if (!token) throw new Error('not connected');
+  const u = new URL('https://api.spotify.com/v1/search');
+  u.searchParams.set('q', q);
+  u.searchParams.set('type', 'track');
+  u.searchParams.set('limit', String(lim));
+  console.log('[searchTracks] absolute URL:', u.toString());
+  const r = await fetch(u.toString(), {
+    method: 'GET',
+    headers: { 'Authorization': 'Bearer ' + token },
+  });
+  if (!r.ok) {
+    const text = await r.text();
+    console.warn('[searchTracks] err:', r.status, text);
+    throw new Error('Spotify ' + r.status + ': ' + text);
+  }
+  const data = await r.json();
   return data?.tracks?.items || [];
 }
 
