@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client';
 import App from './App.jsx';
 import { ensureSession, cloudStorage } from './supabase.js';
 import * as spotify from './providers/spotify.js';
+import * as youtube from './providers/youtube.js';
 
 window.storage = cloudStorage;
 
@@ -31,6 +32,15 @@ async function handleOAuthCallbacks() {
       await spotify.handleCallback(code, state);
     } catch (e) {
       console.error('[spotify callback]', e);
+    } finally {
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+  }
+  if (window.location.hash.includes('access_token=') && window.location.hash.includes('youtube')) {
+    try {
+      await youtube.handleCallbackHash(window.location.hash);
+    } catch (e) {
+      console.error('[youtube callback]', e);
     } finally {
       window.history.replaceState({}, '', window.location.pathname);
     }
