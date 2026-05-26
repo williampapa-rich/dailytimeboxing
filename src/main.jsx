@@ -1,7 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App.jsx';
-import { ensureSession, cloudStorage } from './supabase.js';
+import { supabase, ensureSession, cloudStorage } from './supabase.js';
 import * as spotify from './providers/spotify.js';
 import * as youtube from './providers/youtube.js';
 
@@ -27,6 +27,7 @@ async function handleOAuthCallbacks() {
   const params = new URLSearchParams(window.location.search);
 
   if (params.get('error_code')) {
+    try { await supabase.auth.signOut({ scope: 'local' }); } catch (_) {}
     window.history.replaceState({}, '', window.location.pathname);
   }
 
