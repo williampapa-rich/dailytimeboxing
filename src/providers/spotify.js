@@ -126,10 +126,9 @@ export async function disconnect() {
 async function api(path, init = {}, token) {
   const t = token || await getValidToken();
   if (!t) throw new Error('not connected');
-  const r = await fetch('https://api.spotify.com' + path, {
-    ...init,
-    headers: { 'Authorization': 'Bearer ' + t, 'Content-Type': 'application/json', ...(init.headers || {}) },
-  });
+  const headers = { 'Authorization': 'Bearer ' + t, ...(init.headers || {}) };
+  if (init.body && !headers['Content-Type']) headers['Content-Type'] = 'application/json';
+  const r = await fetch('https://api.spotify.com' + path, { ...init, headers });
   if (!r.ok) {
     const text = await r.text();
     let msg = text;
@@ -216,7 +215,6 @@ export async function searchTracks(query, limit = 20) {
   if (!q) return [];
   const lim = Math.max(1, Math.min(50, parseInt(limit, 10) || 20));
   const url = `/v1/search?q=${encodeURIComponent(q)}&type=track&limit=${lim}`;
-  console.log('[searchTracks] URL:', url);
   const data = await api(url);
   return data?.tracks?.items || [];
 }
