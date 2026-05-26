@@ -25,6 +25,15 @@ export async function linkGoogleIdentity() {
 }
 
 export async function signInWithGoogle() {
+  try {
+    await fetch(`${SUPABASE_URL}/auth/v1/logout`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'apikey': SUPABASE_PUBLISHABLE_KEY },
+    });
+  } catch (e) {}
+  cachedUserId = null;
+  try { await supabase.auth.signOut({ scope: 'local' }); } catch (e) {}
   return supabase.auth.signInWithOAuth({
     provider: 'google',
     options: { redirectTo: getRedirectTo() },
