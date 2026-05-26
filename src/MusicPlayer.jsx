@@ -163,12 +163,24 @@ export default function MusicPlayer() {
     setPremiumRequired(false);
   };
 
+  const stopOtherProvider = async (current) => {
+    try {
+      if (current === 'spotify') {
+        youtube.pause();
+      } else if (current === 'youtube') {
+        if (connected.spotify && deviceIdRef.current) {
+          await spotify.pause(deviceIdRef.current).catch(() => {});
+        }
+      }
+    } catch (e) {}
+  };
+
   // play=true로 transfer하면 다른 탭/기기는 자동 정지되고 우리 탭에서 이어재생
   const ensureSpotifyDevice = async (continuePlay = true) => {
     if (!deviceIdRef.current) return;
     try {
       await spotify.transferPlayback(deviceIdRef.current, continuePlay);
-      await new Promise(r => setTimeout(r, 400));
+      await new Promise(r => setTimeout(r, 600));
     } catch (e) {}
   };
 
@@ -218,9 +230,11 @@ export default function MusicPlayer() {
           window.open(pl.external_urls?.spotify || `https://open.spotify.com/playlist/${pl.id}`, '_blank');
           return;
         }
-        await ensureSpotifyDevice();
+        await stopOtherProvider('spotify');
+        await ensureSpotifyDevice(false);
         await spotify.playPlaylist(pl.id, deviceIdRef.current);
       } else if (activeTab === 'youtube') {
+        await stopOtherProvider('youtube');
         youtube.playPlaylist(pl.id);
         // 5초 안에 영상이 안 잡히면 재생 불가 플리로 간주
         setTimeout(() => {
@@ -238,11 +252,20 @@ export default function MusicPlayer() {
   const togglePlay = async () => {
     try {
       if (activeTab === 'spotify') {
-        await ensureSpotifyDevice();
-        if (playing) await spotify.pause(deviceIdRef.current);
-        else await spotify.resume(deviceIdRef.current);
+        if (playing) {
+          await spotify.pause(deviceIdRef.current);
+        } else {
+          // play=true transfer만으로 다른 device 정지 + 우리 device에서 이어재생
+          await stopOtherProvider('spotify');
+          await ensureSpotifyDevice(true);
+        }
       } else if (activeTab === 'youtube') {
-        if (playing) youtube.pause(); else youtube.play();
+        if (playing) {
+          youtube.pause();
+        } else {
+          await stopOtherProvider('youtube');
+          youtube.play();
+        }
       }
     } catch (e) { setSafeErr(e); }
   };
@@ -250,17 +273,25 @@ export default function MusicPlayer() {
   const skipNext = async () => {
     try {
       if (activeTab === 'spotify') {
-        await ensureSpotifyDevice();
+        await stopOtherProvider('spotify');
+        await ensureSpotifyDevice(true);
         await spotify.next(deviceIdRef.current);
-      } else if (activeTab === 'youtube') youtube.next();
+      } else if (activeTab === 'youtube') {
+        await stopOtherProvider('youtube');
+        youtube.next();
+      }
     } catch (e) { setSafeErr(e); }
   };
   const skipPrev = async () => {
     try {
       if (activeTab === 'spotify') {
-        await ensureSpotifyDevice();
+        await stopOtherProvider('spotify');
+        await ensureSpotifyDevice(true);
         await spotify.previous(deviceIdRef.current);
-      } else if (activeTab === 'youtube') youtube.previous();
+      } else if (activeTab === 'youtube') {
+        await stopOtherProvider('youtube');
+        youtube.previous();
+      }
     } catch (e) { setSafeErr(e); }
   };
 
