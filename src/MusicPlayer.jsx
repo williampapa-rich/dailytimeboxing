@@ -354,14 +354,13 @@ export default function MusicPlayer() {
               </div>
             )}
 
-            {/* YouTube iframe (small preview) */}
+            {/* YouTube iframe - audio only, kept in DOM but invisible */}
             <div style={{
-              display: activeTab === 'youtube' ? 'block' : 'none',
-              width: '100%', aspectRatio: '16 / 9',
-              backgroundColor: '#000', borderRadius: 6, overflow: 'hidden',
-              marginBottom: 10,
+              position: 'absolute', width: 1, height: 1,
+              opacity: 0, pointerEvents: 'none', overflow: 'hidden',
+              left: -9999, top: -9999,
             }}>
-              <div id="dtb-youtube-iframe" style={{ width: '100%', height: '100%' }} />
+              <div id="dtb-youtube-iframe" />
             </div>
 
             {/* Now playing */}
