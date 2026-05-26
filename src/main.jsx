@@ -23,8 +23,6 @@ function Loading({ msg }) {
 
 root.render(<Loading msg="연결 중..." />);
 
-let googleSignInDone = false;
-
 async function handleOAuthCallbacks() {
   const params = new URLSearchParams(window.location.search);
 
@@ -47,12 +45,13 @@ async function handleOAuthCallbacks() {
         });
         if (error) {
           console.error('[google id_token]', error);
+          window.history.replaceState({}, '', window.location.pathname);
         } else {
-          googleSignInDone = true;
+          window.location.replace(window.location.pathname);
+          return;
         }
       } catch (e) {
         console.error('[google id_token]', e);
-      } finally {
         window.history.replaceState({}, '', window.location.pathname);
       }
     }
@@ -83,9 +82,7 @@ async function handleOAuthCallbacks() {
 (async () => {
   try {
     await handleOAuthCallbacks();
-    if (!googleSignInDone) {
-      await ensureSession();
-    }
+    await ensureSession();
     root.render(<App />);
   } catch (err) {
     console.error(err);
