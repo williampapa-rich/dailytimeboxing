@@ -965,10 +965,10 @@ function EditView({
   })();
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-6">
+    <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 120px)' }}>
       {/* Timeline */}
-      <div style={{ backgroundColor: C.card, borderRadius: 12, border: `1px solid ${C.border}`, padding: 12, userSelect: 'none' }}>
-        <div ref={scrollRef} style={{ maxHeight: '78vh', overflowY: 'auto', paddingRight: 4 }}>
+      <div style={{ flex: 1, minHeight: 0, backgroundColor: C.card, borderRadius: '12px 12px 0 0', border: `1px solid ${C.border}`, borderBottom: 'none', padding: 12, userSelect: 'none' }}>
+        <div ref={scrollRef} style={{ height: '100%', overflowY: 'auto', paddingRight: 4 }}>
           <div style={{ position: 'relative' }}>
             {Array.from({ length: SLOTS_PER_DAY }).map((_, slot) => {
               const isHour = slot % 2 === 0;
@@ -1124,12 +1124,13 @@ function EditView({
         </div>
       </div>
 
-      {/* Form panel */}
+      {/* Form panel — fixed at bottom */}
       <div
-        className="dtb-form-panel"
         style={{
-          backgroundColor: C.card, borderRadius: 12, border: `1px solid ${C.border}`,
-          padding: 20, height: 'fit-content'
+          flexShrink: 0,
+          backgroundColor: C.card, borderRadius: '0 0 12px 12px', border: `1px solid ${C.border}`,
+          borderTop: `1px solid ${C.border}`,
+          padding: '16px 20px', maxHeight: '45vh', overflowY: 'auto',
         }}
       >
         {sel ? (
