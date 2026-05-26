@@ -8,8 +8,6 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
     persistSession: true,
     autoRefreshToken: true,
     storageKey: 'dtb-supabase-auth',
-    detectSessionInUrl: true,
-    flowType: 'implicit',
   },
 });
 
@@ -19,15 +17,18 @@ function getRedirectTo() {
   return window.location.origin + window.location.pathname;
 }
 
-export async function signInWithGoogle() {
-  const result = await supabase.auth.signInWithOAuth({
+export async function linkGoogleIdentity() {
+  return supabase.auth.linkIdentity({
     provider: 'google',
-    options: { redirectTo: getRedirectTo(), skipBrowserRedirect: true },
+    options: { redirectTo: getRedirectTo() },
   });
-  if (result.data?.url) {
-    window.location.href = result.data.url;
-  }
-  return result;
+}
+
+export async function signInWithGoogle() {
+  return supabase.auth.signInWithOAuth({
+    provider: 'google',
+    options: { redirectTo: getRedirectTo() },
+  });
 }
 
 export async function signOut() {
@@ -49,6 +50,7 @@ export async function ensureSession() {
   if (error) throw error;
   cachedUserId = data.session?.user?.id || data.user?.id || null;
   if (!cachedUserId) throw new Error('익명 로그인 응답에 user id가 없습니다');
+  console.log('[supabase] anonymous user id:', cachedUserId);
   return data.session;
 }
 
