@@ -748,7 +748,7 @@ export default function App() {
         top: 0,
         zIndex: 30
       }}>
-        <div className="max-w-7xl mx-auto" style={{ padding: '10px 16px' }}>
+        <div style={{ maxWidth: 860, margin: '0 auto', padding: '10px 16px' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               <div style={{
@@ -870,7 +870,7 @@ export default function App() {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto" style={{ padding: '24px' }}>
+      <div style={{ maxWidth: 860, margin: '0 auto', padding: '24px' }}>
         {loading ? (
           <div style={{ textAlign: 'center', color: C.textMid, padding: '80px 0' }}>불러오는 중...</div>
         ) : mode === 'edit' ? (
