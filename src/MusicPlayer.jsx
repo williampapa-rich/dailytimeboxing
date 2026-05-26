@@ -160,7 +160,12 @@ export default function MusicPlayer() {
         });
       } catch (e) {
         if (e?.code === 'reauth') {
-          setErr('YouTube 토큰이 만료됐어요. 다시 연결해주세요.');
+          await removeConnection('youtube');
+          setConnected(c => ({ ...c, youtube: false }));
+          setPlaylists([]);
+          setSelectedPlaylist(null);
+          setTrack(null);
+          setPlaying(false);
         } else {
           setErr(e.message || String(e));
         }
