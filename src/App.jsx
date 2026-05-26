@@ -240,11 +240,7 @@ export default function App() {
     return () => clearInterval(i);
   }, []);
 
-  useEffect(() => {
-    if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
-      try { Notification.requestPermission(); } catch (e) {}
-    }
-  }, []);
+  // 알림 권한 요청은 사용자 제스처 안에서만 가능 — 자동 호출 제거
 
   useEffect(() => {
     const info = getTimerInfo(boxes);
