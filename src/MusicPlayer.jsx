@@ -59,15 +59,6 @@ export default function MusicPlayer() {
     return () => window.removeEventListener('keydown', onKey);
   }, []);
 
-  useEffect(() => {
-    if (!isOpen) return;
-    const onClick = (e) => {
-      if (panelRef.current && !panelRef.current.contains(e.target)) setIsOpen(false);
-    };
-    // Delay to avoid catching the opening click
-    const t = setTimeout(() => document.addEventListener('mousedown', onClick), 0);
-    return () => { clearTimeout(t); document.removeEventListener('mousedown', onClick); };
-  }, [isOpen]);
 
   useEffect(() => {
     (async () => {
@@ -365,6 +356,21 @@ export default function MusicPlayer() {
           <Music size={20} />
         )}
       </button>
+
+      {/* Backdrop blur overlay */}
+      <div
+        onClick={() => setIsOpen(false)}
+        style={{
+          position: 'fixed', inset: 0, zIndex: 51,
+          backdropFilter: isOpen ? 'blur(6px)' : 'blur(0px)',
+          WebkitBackdropFilter: isOpen ? 'blur(6px)' : 'blur(0px)',
+          background: isOpen ? 'rgba(0,0,0,0.25)' : 'rgba(0,0,0,0)',
+          opacity: isOpen ? 1 : 0,
+          visibility: isOpen ? 'visible' : 'hidden',
+          pointerEvents: isOpen ? 'auto' : 'none',
+          transition: 'all 0.25s ease',
+        }}
+      />
 
       {/* Panel — anchored bottom-right, opens upward-left */}
       <div
