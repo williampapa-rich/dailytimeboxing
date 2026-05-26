@@ -216,12 +216,10 @@ export async function searchTracks(query, limit = 20) {
   const lim = Math.max(1, Math.min(50, parseInt(limit, 10) || 20));
   const token = await getValidToken();
   if (!token) throw new Error('not connected');
-  const u = new URL('https://api.spotify.com/v1/search');
-  u.searchParams.set('q', q);
-  u.searchParams.set('type', 'track');
-  u.searchParams.set('limit', String(lim));
-  console.log('[searchTracks] absolute URL:', u.toString());
-  const r = await fetch(u.toString(), {
+  // limit 파라미터 빼고 type만 — Spotify가 일부 토큰에 대해 limit 검증을 잘못하는 케이스 우회
+  const u = `https://api.spotify.com/v1/search?type=track&q=${encodeURIComponent(q)}`;
+  console.log('[searchTracks v2] URL:', u);
+  const r = await fetch(u, {
     method: 'GET',
     headers: { 'Authorization': 'Bearer ' + token },
   });
