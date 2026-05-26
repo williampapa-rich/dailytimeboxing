@@ -20,14 +20,16 @@ function getRedirectTo() {
 const GOOGLE_CLIENT_ID = '260153692177-3m6mukkrtsnv68hib6uvppbk451a6kg5.apps.googleusercontent.com';
 
 export async function signInWithGoogle() {
-  const nonce = [...crypto.getRandomValues(new Uint8Array(16))].map(b => b.toString(16).padStart(2, '0')).join('');
-  sessionStorage.setItem('dtb-google-nonce', nonce);
+  const rawNonce = [...crypto.getRandomValues(new Uint8Array(16))].map(b => b.toString(16).padStart(2, '0')).join('');
+  sessionStorage.setItem('dtb-google-nonce', rawNonce);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(rawNonce));
+  const hashedNonce = [...new Uint8Array(hashBuffer)].map(b => b.toString(16).padStart(2, '0')).join('');
   const params = new URLSearchParams({
     client_id: GOOGLE_CLIENT_ID,
     redirect_uri: getRedirectTo(),
     response_type: 'id_token',
     scope: 'openid email profile',
-    nonce,
+    nonce: hashedNonce,
     prompt: 'select_account',
   });
   window.location.href = `https://accounts.google.com/o/oauth2/v2/auth?${params}`;
