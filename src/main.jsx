@@ -1,7 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App.jsx';
-import { ensureSession, cloudStorage } from './supabase.js';
+import { supabase, ensureSession, cloudStorage } from './supabase.js';
 import * as spotify from './providers/spotify.js';
 import * as youtube from './providers/youtube.js';
 
@@ -32,6 +32,14 @@ async function handleOAuthCallbacks() {
       await spotify.handleCallback(code, state);
     } catch (e) {
       console.error('[spotify callback]', e);
+    } finally {
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+  } else if (code) {
+    try {
+      await supabase.auth.exchangeCodeForSession(code);
+    } catch (e) {
+      console.error('[supabase oauth callback]', e);
     } finally {
       window.history.replaceState({}, '', window.location.pathname);
     }
