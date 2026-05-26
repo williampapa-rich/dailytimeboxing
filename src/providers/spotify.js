@@ -211,9 +211,11 @@ export async function seek(positionMs, deviceId) {
 }
 
 export async function searchTracks(query, limit = 20) {
-  if (!query?.trim()) return [];
-  const q = new URLSearchParams({ q: query, type: 'track', limit: String(limit) });
-  const data = await api('/v1/search?' + q.toString());
+  const q = (query || '').trim();
+  if (!q) return [];
+  const lim = Math.max(1, Math.min(50, parseInt(limit, 10) || 20));
+  const url = `/v1/search?q=${encodeURIComponent(q)}&type=track&limit=${lim}`;
+  const data = await api(url);
   return data?.tracks?.items || [];
 }
 

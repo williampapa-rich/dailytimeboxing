@@ -432,6 +432,35 @@ export default function MusicPlayer() {
         transition: 'width 0.18s, border-radius 0.18s',
       }}
     >
+      <style>{`
+        .dtb-progress {
+          -webkit-appearance: none; appearance: none;
+          width: 100%; height: 14px; background: transparent; cursor: pointer; margin: 0; padding: 0;
+          display: block;
+        }
+        .dtb-progress::-webkit-slider-runnable-track {
+          height: 3px; border-radius: 2px;
+          background: linear-gradient(to right, var(--c) 0, var(--c) var(--p), rgba(255,255,255,0.18) var(--p), rgba(255,255,255,0.18) 100%);
+        }
+        .dtb-progress::-moz-range-track {
+          height: 3px; border-radius: 2px;
+          background: linear-gradient(to right, var(--c) 0, var(--c) var(--p), rgba(255,255,255,0.18) var(--p), rgba(255,255,255,0.18) 100%);
+        }
+        .dtb-progress::-webkit-slider-thumb {
+          -webkit-appearance: none; appearance: none;
+          width: 10px; height: 10px; border-radius: 50%;
+          background: var(--c); border: none; margin-top: -3.5px;
+          box-shadow: 0 1px 3px rgba(0,0,0,0.5);
+        }
+        .dtb-progress::-moz-range-thumb {
+          width: 10px; height: 10px; border-radius: 50%;
+          background: var(--c); border: none;
+          box-shadow: 0 1px 3px rgba(0,0,0,0.5);
+        }
+        .dtb-progress:focus { outline: none; }
+        .dtb-progress-spotify { --c: #1DB954; }
+        .dtb-progress-youtube { --c: #FF0000; }
+      `}</style>
       {/* Tabs */}
       {!collapsed && (
       <div style={{
@@ -699,10 +728,8 @@ export default function MusicPlayer() {
                   onChange={(e) => setSeekValue(parseInt(e.target.value, 10))}
                   onMouseUp={(e) => onSeekCommit(parseInt(e.target.value, 10))}
                   onTouchEnd={(e) => onSeekCommit(parseInt(e.target.value, 10))}
-                  style={{
-                    width: '100%', accentColor: T.accent,
-                    background: 'transparent', cursor: 'pointer',
-                  }}
+                  className={`dtb-progress dtb-progress-${activeTab}`}
+                  style={{ '--p': `${Math.min(100, ((seeking ? seekValue : position) / duration) * 100)}%` }}
                 />
                 <div className="dtb-tnum" style={{
                   display: 'flex', justifyContent: 'space-between',
