@@ -585,7 +585,7 @@ export default function App() {
   };
 
   return (
-    <div className="dtb-root" style={{ minHeight: '100vh', backgroundColor: C.bg, color: C.text, colorScheme: C.scheme }}>
+    <div className="dtb-root" style={{ height: '100vh', display: 'flex', flexDirection: 'column', overflow: mode === 'edit' ? 'hidden' : 'auto', backgroundColor: C.bg, color: C.text, colorScheme: C.scheme }}>
       <style>{`
         .dtb-root, .dtb-root * {
           font-family: 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, system-ui, Roboto, 'Helvetica Neue', 'Segoe UI', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif;
@@ -870,7 +870,7 @@ export default function App() {
         </div>
       </div>
 
-      <div style={{ maxWidth: 860, margin: '0 auto', padding: '24px' }}>
+      <div style={{ flex: 1, minHeight: 0, maxWidth: 860, margin: '0 auto', padding: '24px', width: '100%' }}>
         {loading ? (
           <div style={{ textAlign: 'center', color: C.textMid, padding: '80px 0' }}>불러오는 중...</div>
         ) : mode === 'edit' ? (
@@ -965,7 +965,7 @@ function EditView({
   })();
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 120px)' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       {/* Timeline */}
       <div style={{ flex: 1, minHeight: 0, backgroundColor: C.card, borderRadius: '12px 12px 0 0', border: `1px solid ${C.border}`, borderBottom: 'none', padding: 12, userSelect: 'none' }}>
         <div ref={scrollRef} style={{ height: '100%', overflowY: 'auto', paddingRight: 4 }}>
