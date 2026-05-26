@@ -1045,7 +1045,7 @@ function EditView({
         {sel ? (
           <>
             <label style={{ display: 'block', fontSize: 11, color: C.textMid, marginBottom: 6, fontWeight: 600 }}>시간 범위</label>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, minWidth: 0 }}>
               <input
                 type="text"
                 value={fStart}
@@ -1053,10 +1053,10 @@ function EditView({
                 onBlur={() => formatTimeOnBlur('start')}
                 placeholder="HH:MM"
                 className="dtb-time-input"
-                style={{ flex: 1 }}
+                style={{ flex: '1 1 0', minWidth: 0, width: '100%' }}
                 inputMode="numeric"
               />
-              <span style={{ color: C.textMid, fontSize: 14, fontWeight: 500 }}>—</span>
+              <span style={{ color: C.textMid, fontSize: 14, fontWeight: 500, flexShrink: 0 }}>—</span>
               <input
                 type="text"
                 value={fEnd}
@@ -1064,7 +1064,7 @@ function EditView({
                 onBlur={() => formatTimeOnBlur('end')}
                 placeholder="HH:MM"
                 className="dtb-time-input"
-                style={{ flex: 1 }}
+                style={{ flex: '1 1 0', minWidth: 0, width: '100%' }}
                 inputMode="numeric"
               />
             </div>
