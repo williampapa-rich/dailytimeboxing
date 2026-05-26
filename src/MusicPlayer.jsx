@@ -44,6 +44,7 @@ export default function MusicPlayer() {
   const [track, setTrack] = useState(null);
   const [playing, setPlaying] = useState(false);
   const [premiumRequired, setPremiumRequired] = useState(false);
+  const [ytUnplayable, setYtUnplayable] = useState(false);
   const deviceIdRef = useRef(null);
   const playlistBtnRef = useRef(null);
 
@@ -71,6 +72,7 @@ export default function MusicPlayer() {
     setPlaylists([]);
     setSelectedPlaylist(null);
     setPremiumRequired(false);
+    setYtUnplayable(false);
     setErr('');
   }, [activeTab]);
 
@@ -114,7 +116,10 @@ export default function MusicPlayer() {
         setPlaylists(items);
         await youtube.initPlayer('dtb-youtube-iframe');
         unsub = youtube.onPlayerState((s) => {
-          if (s.track) setTrack({ name: s.track.name, artist: s.track.artist, albumArt: null });
+          if (s.track) {
+            setTrack({ name: s.track.name, artist: s.track.artist, albumArt: null });
+            setYtUnplayable(false);
+          }
           setPlaying(!!s.playing);
         });
       } catch (e) {
@@ -166,9 +171,18 @@ export default function MusicPlayer() {
     } catch (e) {}
   };
 
+  // SDK 내부에서 종종 튀어나오는 "string did not match" 같은 무해한 메시지는 무시
+  const setSafeErr = (e) => {
+    const msg = (e && (e.message || String(e))) || '';
+    if (/string did not match/i.test(msg)) return;
+    if (/CloudPlaybackClientError/i.test(msg)) return;
+    setErr(msg);
+  };
+
   const onSelectPlaylist = async (pl) => {
     setPlaylistDropdownOpen(false);
     setSelectedPlaylist(pl);
+    setYtUnplayable(false);
     try {
       if (activeTab === 'spotify') {
         if (premiumRequired) {
@@ -179,9 +193,16 @@ export default function MusicPlayer() {
         await spotify.playPlaylist(pl.id, deviceIdRef.current);
       } else if (activeTab === 'youtube') {
         youtube.playPlaylist(pl.id);
+        // 5초 안에 영상이 안 잡히면 재생 불가 플리로 간주
+        setTimeout(() => {
+          setTrack((cur) => {
+            if (!cur) setYtUnplayable(true);
+            return cur;
+          });
+        }, 5000);
       }
     } catch (e) {
-      setErr(e.message);
+      setSafeErr(e);
     }
   };
 
@@ -194,7 +215,7 @@ export default function MusicPlayer() {
       } else if (activeTab === 'youtube') {
         if (playing) youtube.pause(); else youtube.play();
       }
-    } catch (e) { setErr(e.message); }
+    } catch (e) { setSafeErr(e); }
   };
 
   const skipNext = async () => {
@@ -203,7 +224,7 @@ export default function MusicPlayer() {
         await ensureSpotifyDevice();
         await spotify.next(deviceIdRef.current);
       } else if (activeTab === 'youtube') youtube.next();
-    } catch (e) { setErr(e.message); }
+    } catch (e) { setSafeErr(e); }
   };
   const skipPrev = async () => {
     try {
@@ -211,7 +232,7 @@ export default function MusicPlayer() {
         await ensureSpotifyDevice();
         await spotify.previous(deviceIdRef.current);
       } else if (activeTab === 'youtube') youtube.previous();
-    } catch (e) { setErr(e.message); }
+    } catch (e) { setSafeErr(e); }
   };
 
   const [dropdownRect, setDropdownRect] = useState(null);
@@ -399,6 +420,16 @@ export default function MusicPlayer() {
                 backgroundColor: '#FFFFFF08', borderRadius: 6, lineHeight: 1.5,
               }}>
                 인앱 재생은 Spotify Premium 전용입니다. 플레이리스트를 누르면 Spotify 앱에서 열려요.
+              </div>
+            )}
+
+            {/* YouTube playlist unplayable notice */}
+            {activeTab === 'youtube' && ytUnplayable && (
+              <div style={{
+                fontSize: 11, color: T.sub, marginBottom: 10, padding: 8,
+                backgroundColor: '#FFFFFF08', borderRadius: 6, lineHeight: 1.5,
+              }}>
+                이 플레이리스트는 임베드 재생이 제한돼 있어요. YouTube에서 직접 만든 플리만 지원합니다 (자동 생성된 믹스/추천 플리는 불가).
               </div>
             )}
 
