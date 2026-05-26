@@ -1,5 +1,5 @@
 import { useState, useEffect, useLayoutEffect, useRef, useCallback } from "react";
-import { Pencil, Eye, Trash2, Plus, Clock, Save, Check, X, Sun, Moon } from "lucide-react";
+import { Pencil, Eye, Trash2, Plus, Clock, Save, Check, X, Sun, Moon, ChevronLeft, ChevronRight, Calendar } from "lucide-react";
 import AuthButton from "./AuthButton.jsx";
 import MusicPlayer from "./MusicPlayer.jsx";
 
@@ -81,15 +81,23 @@ const timeToMin = (str) => {
 
 const formatRange = (start, end) => `${minToTime(start)} - ${minToTime(end)}`;
 
-const getDateKey = () => {
-  const d = new Date();
+const getDateKey = (d = new Date()) => {
   return `timeboxes:${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`;
 };
 
-const formatDate = () => {
-  const d = new Date();
+const formatDate = (d = new Date()) => {
   const w = ['일','월','화','수','목','금','토'];
   return `${d.getFullYear()}년 ${d.getMonth()+1}월 ${d.getDate()}일 (${w[d.getDay()]})`;
+};
+
+const toDateString = (d) => `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`;
+
+const isToday = (d) => toDateString(d) === toDateString(new Date());
+
+const shiftDate = (d, days) => {
+  const r = new Date(d);
+  r.setDate(r.getDate() + days);
+  return r;
 };
 
 const getCurrentMin = () => {
@@ -154,6 +162,7 @@ const getTimerInfo = (boxes) => {
 export default function App() {
   const [mode, setMode] = useState('view');
   const [theme, setTheme] = useState('light');
+  const [selectedDate, setSelectedDate] = useState(() => new Date());
   const [boxes, setBoxes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [, setTick] = useState(0);
@@ -221,13 +230,23 @@ export default function App() {
         const t = await window.storage.get('dtb-theme');
         if (t?.value === 'dark' || t?.value === 'light') setTheme(t.value);
       } catch (e) {}
-      try {
-        const r = await window.storage.get(getDateKey());
-        if (r?.value) setBoxes((JSON.parse(r.value) || []).map(migrateBox));
-      } catch (e) {}
       setLoading(false);
     })();
   }, []);
+
+  useEffect(() => {
+    closeEdit();
+    let cancelled = false;
+    (async () => {
+      try {
+        const r = await window.storage.get(getDateKey(selectedDate));
+        if (!cancelled) setBoxes(r?.value ? (JSON.parse(r.value) || []).map(migrateBox) : []);
+      } catch (e) {
+        if (!cancelled) setBoxes([]);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [selectedDate]);
 
   const toggleTheme = async () => {
     const nt = theme === 'light' ? 'dark' : 'light';
@@ -263,7 +282,7 @@ export default function App() {
 
   const save = async (b) => {
     setBoxes(b);
-    try { await window.storage.set(getDateKey(), JSON.stringify(b)); } catch (e) {}
+    try { await window.storage.set(getDateKey(selectedDate), JSON.stringify(b)); } catch (e) {}
   };
 
   const overlaps = (start, end, exc = null) =>
@@ -513,17 +532,19 @@ export default function App() {
 
   const getTarget = useCallback(() => (getCurrentMin() / MIN_PER_SLOT) * sw - cw / 2, [sw, cw]);
 
+  const viewingToday = isToday(selectedDate);
+
   useLayoutEffect(() => {
-    if (mode !== 'view') return;
+    if (mode !== 'view' || !viewingToday) return;
     const el = viewElRef.current;
     if (!el || cw === 0) return;
     progRef.current = Date.now() + 500;
     el.scrollLeft = getTarget();
     lastScrollRef.current = 0;
-  }, [mode, cw, getTarget]);
+  }, [mode, cw, getTarget, viewingToday]);
 
   useEffect(() => {
-    if (mode !== 'view') return;
+    if (mode !== 'view' || !viewingToday) return;
     const interval = setInterval(() => {
       const el = viewElRef.current;
       if (!el) return;
@@ -542,7 +563,7 @@ export default function App() {
       }
     }, 500);
     return () => clearInterval(interval);
-  }, [mode, getTarget]);
+  }, [mode, getTarget, viewingToday]);
 
   useEffect(() => {
     if (mode !== 'view') return;
@@ -737,7 +758,63 @@ export default function App() {
             </div>
             <div>
               <h1 style={{ fontSize: 15, fontWeight: 700, lineHeight: 1.2, margin: 0, color: C.text }}>Daily Time Boxing</h1>
-              <p style={{ fontSize: 11, color: C.textMid, marginTop: 2, margin: 0 }}>{formatDate()}</p>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 2 }}>
+                <button
+                  onClick={() => setSelectedDate(d => shiftDate(d, -1))}
+                  style={{
+                    background: 'none', border: 'none', cursor: 'pointer', padding: 0,
+                    color: C.textMid, display: 'flex', alignItems: 'center', borderRadius: 4,
+                  }}
+                  title="이전 날짜"
+                >
+                  <ChevronLeft size={14} />
+                </button>
+                <label style={{ position: 'relative', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <span style={{
+                    fontSize: 11, color: isToday(selectedDate) ? C.textMid : C.accent,
+                    fontWeight: isToday(selectedDate) ? 400 : 600,
+                  }}>
+                    {formatDate(selectedDate)}
+                  </span>
+                  <Calendar size={11} color={C.textMid} />
+                  <input
+                    type="date"
+                    value={toDateString(selectedDate)}
+                    onChange={(e) => {
+                      const parts = e.target.value.split('-');
+                      if (parts.length === 3) {
+                        setSelectedDate(new Date(+parts[0], +parts[1] - 1, +parts[2]));
+                      }
+                    }}
+                    style={{
+                      position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer',
+                      width: '100%', height: '100%',
+                    }}
+                  />
+                </label>
+                <button
+                  onClick={() => setSelectedDate(d => shiftDate(d, 1))}
+                  style={{
+                    background: 'none', border: 'none', cursor: 'pointer', padding: 0,
+                    color: C.textMid, display: 'flex', alignItems: 'center', borderRadius: 4,
+                  }}
+                  title="다음 날짜"
+                >
+                  <ChevronRight size={14} />
+                </button>
+                {!isToday(selectedDate) && (
+                  <button
+                    onClick={() => setSelectedDate(new Date())}
+                    style={{
+                      background: C.accent, border: 'none', cursor: 'pointer',
+                      color: '#fff', fontSize: 9, fontWeight: 700, padding: '2px 6px',
+                      borderRadius: 4, marginLeft: 2,
+                    }}
+                  >
+                    오늘
+                  </button>
+                )}
+              </div>
             </div>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -792,6 +869,7 @@ export default function App() {
           <EditView
             C={C}
             boxes={boxes}
+            isViewingToday={isToday(selectedDate)}
             displayRange={displayRange}
             rangeConflicts={rangeConflicts}
             onSlotDown={onSlotDown}
@@ -828,6 +906,8 @@ export default function App() {
             tw={tw}
             onScroll={onScroll}
             toggleTaskInBox={toggleTaskInBox}
+            isViewingToday={isToday(selectedDate)}
+            selectedDate={selectedDate}
           />
         )}
       </div>
@@ -837,7 +917,7 @@ export default function App() {
 }
 
 function EditView({
-  C, boxes, displayRange, rangeConflicts, onSlotDown, onSlotEnter, onSlotLeave, onBoxMouseDown, boxDrag,
+  C, boxes, isViewingToday, displayRange, rangeConflicts, onSlotDown, onSlotEnter, onSlotLeave, onBoxMouseDown, boxDrag,
   sel, editing, fTitle, setFTitle, fDesc, setFDesc, fColor, setFColor,
   fStart, setFStart, fEnd, setFEnd,
   fTasks, addTask, addTaskAfter, updateTaskText, toggleTask, removeTask,
@@ -1000,6 +1080,7 @@ function EditView({
             })}
 
             {/* Current time indicator */}
+            {isViewingToday && (
             <div
               style={{
                 position: 'absolute',
@@ -1030,6 +1111,7 @@ function EditView({
                 height: 1.5, backgroundColor: C.indicator, opacity: 0.85,
               }} />
             </div>
+            )}
           </div>
         </div>
       </div>
@@ -1257,8 +1339,8 @@ function EditView({
   );
 }
 
-function ViewMode({ C, viewRef, boxes, sw, tw, onScroll, toggleTaskInBox }) {
-  const timer = getTimerInfo(boxes);
+function ViewMode({ C, viewRef, boxes, sw, tw, onScroll, toggleTaskInBox, isViewingToday, selectedDate }) {
+  const timer = isViewingToday ? getTimerInfo(boxes) : { type: 'idle' };
   const urgent = !!timer.urgent && (timer.type === 'current' || timer.type === 'next');
   const urgentColor = C.indicator;
 
@@ -1371,15 +1453,23 @@ function ViewMode({ C, viewRef, boxes, sw, tw, onScroll, toggleTaskInBox }) {
         )}
         {timer.type === 'idle' && (
           <>
-            <div style={{ fontSize: 11, color: C.textMid, textTransform: 'uppercase', letterSpacing: '0.25em', fontWeight: 600, marginBottom: 12 }}>여유 시간</div>
-            <div style={{ fontSize: 20, fontWeight: 700, marginBottom: 32, color: C.textMid }}>예정된 일정이 없습니다</div>
-            <div className="dtb-tnum" style={{
-              fontSize: 'clamp(4.5rem, 13vw, 9rem)', fontWeight: 900,
-              letterSpacing: '-0.04em', color: C.text, lineHeight: 1
-            }}>
-              {currentTimeHMS()}
+            <div style={{ fontSize: 11, color: C.textMid, textTransform: 'uppercase', letterSpacing: '0.25em', fontWeight: 600, marginBottom: 12 }}>
+              {isViewingToday ? '여유 시간' : formatDate(selectedDate)}
             </div>
-            <div style={{ fontSize: 13, color: C.textMid, marginTop: 20, fontWeight: 600 }}>현재 시각</div>
+            <div style={{ fontSize: 20, fontWeight: 700, marginBottom: 32, color: C.textMid }}>
+              {isViewingToday ? '예정된 일정이 없습니다' : (boxes.length > 0 ? `${boxes.length}개의 타임박스` : '예정된 일정이 없습니다')}
+            </div>
+            {isViewingToday && (
+              <>
+                <div className="dtb-tnum" style={{
+                  fontSize: 'clamp(4.5rem, 13vw, 9rem)', fontWeight: 900,
+                  letterSpacing: '-0.04em', color: C.text, lineHeight: 1
+                }}>
+                  {currentTimeHMS()}
+                </div>
+                <div style={{ fontSize: 13, color: C.textMid, marginTop: 20, fontWeight: 600 }}>현재 시각</div>
+              </>
+            )}
           </>
         )}
       </div>
@@ -1395,6 +1485,7 @@ function ViewMode({ C, viewRef, boxes, sw, tw, onScroll, toggleTaskInBox }) {
           <div style={{ position: 'absolute', top: 0, right: 0, bottom: 0, width: 48, background: `linear-gradient(to left, ${C.cardAlt} 0%, ${C.cardAlt}cc 50%, transparent 100%)`, pointerEvents: 'none', zIndex: 10 }} />
 
           {/* Current time indicator - RED */}
+          {isViewingToday && (
           <div style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', top: 0, height: 90, zIndex: 20, pointerEvents: 'none' }}>
             <div style={{
               position: 'absolute', top: -24, left: '50%', transform: 'translateX(-50%)',
@@ -1414,6 +1505,7 @@ function ViewMode({ C, viewRef, boxes, sw, tw, onScroll, toggleTaskInBox }) {
               boxShadow: `0 0 0 1px ${C.card}40`
             }} />
           </div>
+          )}
 
           <div
             ref={viewRef}
