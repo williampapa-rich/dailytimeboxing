@@ -158,6 +158,14 @@ export default function MusicPlayer() {
     setPremiumRequired(false);
   };
 
+  const ensureSpotifyDevice = async () => {
+    if (!deviceIdRef.current) return;
+    try {
+      await spotify.transferPlayback(deviceIdRef.current, false);
+      await new Promise(r => setTimeout(r, 300));
+    } catch (e) {}
+  };
+
   const onSelectPlaylist = async (pl) => {
     setPlaylistDropdownOpen(false);
     setSelectedPlaylist(pl);
@@ -167,6 +175,7 @@ export default function MusicPlayer() {
           window.open(pl.external_urls?.spotify || `https://open.spotify.com/playlist/${pl.id}`, '_blank');
           return;
         }
+        await ensureSpotifyDevice();
         await spotify.playPlaylist(pl.id, deviceIdRef.current);
       } else if (activeTab === 'youtube') {
         youtube.playPlaylist(pl.id);
@@ -179,6 +188,7 @@ export default function MusicPlayer() {
   const togglePlay = async () => {
     try {
       if (activeTab === 'spotify') {
+        await ensureSpotifyDevice();
         if (playing) await spotify.pause(deviceIdRef.current);
         else await spotify.resume(deviceIdRef.current);
       } else if (activeTab === 'youtube') {
@@ -189,17 +199,22 @@ export default function MusicPlayer() {
 
   const skipNext = async () => {
     try {
-      if (activeTab === 'spotify') await spotify.next(deviceIdRef.current);
-      else if (activeTab === 'youtube') youtube.next();
+      if (activeTab === 'spotify') {
+        await ensureSpotifyDevice();
+        await spotify.next(deviceIdRef.current);
+      } else if (activeTab === 'youtube') youtube.next();
     } catch (e) { setErr(e.message); }
   };
   const skipPrev = async () => {
     try {
-      if (activeTab === 'spotify') await spotify.previous(deviceIdRef.current);
-      else if (activeTab === 'youtube') youtube.previous();
+      if (activeTab === 'spotify') {
+        await ensureSpotifyDevice();
+        await spotify.previous(deviceIdRef.current);
+      } else if (activeTab === 'youtube') youtube.previous();
     } catch (e) { setErr(e.message); }
   };
 
+  const [dropdownRect, setDropdownRect] = useState(null);
   const togglePlaylistDropdown = () => {
     if (playlistDropdownOpen) {
       setPlaylistDropdownOpen(false);
@@ -208,9 +223,18 @@ export default function MusicPlayer() {
     const btn = playlistBtnRef.current;
     if (btn) {
       const rect = btn.getBoundingClientRect();
-      const above = rect.top;
-      const below = window.innerHeight - rect.bottom;
-      setDropdownDir(below > above ? 'down' : 'up');
+      const above = rect.top - 16;
+      const below = window.innerHeight - rect.bottom - 16;
+      const dir = below > above ? 'down' : 'up';
+      setDropdownDir(dir);
+      const maxH = Math.min(320, Math.max(120, dir === 'down' ? below : above));
+      setDropdownRect({
+        left: rect.left,
+        width: rect.width,
+        top: dir === 'down' ? rect.bottom + 4 : 'auto',
+        bottom: dir === 'up' ? (window.innerHeight - rect.top + 4) : 'auto',
+        maxHeight: maxH,
+      });
     }
     setPlaylistDropdownOpen(true);
   };
@@ -219,7 +243,8 @@ export default function MusicPlayer() {
     <div
       style={{
         position: 'fixed', bottom: 20, right: 20, zIndex: 50,
-        width: collapsed ? 56 : 340, borderRadius: collapsed ? '50%' : 12, overflow: 'hidden',
+        width: collapsed ? 56 : 340, borderRadius: collapsed ? '50%' : 12,
+        overflow: 'hidden',
         backgroundColor: T.bg, color: T.text,
         border: `1px solid ${T.border}`,
         boxShadow: '0 12px 32px rgba(0,0,0,0.3)',
@@ -326,16 +351,18 @@ export default function MusicPlayer() {
                 </span>
                 <ChevronDown size={14} color={T.sub} />
               </button>
-              {playlistDropdownOpen && playlists.length > 0 && (
+              {playlistDropdownOpen && playlists.length > 0 && dropdownRect && (
                 <div style={{
-                  position: 'absolute',
-                  ...(dropdownDir === 'up'
-                    ? { bottom: '100%', marginBottom: 4, boxShadow: '0 -4px 16px rgba(0,0,0,0.4)' }
-                    : { top: '100%', marginTop: 4, boxShadow: '0 4px 16px rgba(0,0,0,0.4)' }),
-                  left: 0, right: 0,
-                  maxHeight: 260, overflowY: 'auto',
+                  position: 'fixed',
+                  left: dropdownRect.left,
+                  width: dropdownRect.width,
+                  top: dropdownRect.top,
+                  bottom: dropdownRect.bottom,
+                  maxHeight: dropdownRect.maxHeight,
+                  overflowY: 'auto',
                   backgroundColor: T.bg, border: `1px solid ${T.border}`, borderRadius: 6,
-                  zIndex: 10,
+                  boxShadow: dropdownDir === 'up' ? '0 -4px 16px rgba(0,0,0,0.4)' : '0 4px 16px rgba(0,0,0,0.4)',
+                  zIndex: 100,
                 }}>
                   {playlists.map(p => {
                     const name = activeTab === 'spotify' ? p.name : p.snippet?.title;
