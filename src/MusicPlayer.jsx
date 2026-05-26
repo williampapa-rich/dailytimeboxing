@@ -256,14 +256,24 @@ export default function MusicPlayer() {
           await spotify.sdkPause();
         } else {
           await stopOtherProvider('spotify');
-          // SDK에 현재 트랙 state가 있는지 확인
           const state = await spotify.getSdkState();
           if (state) {
             await spotify.sdkResume();
           } else {
-            // SDK가 아직 컨텍스트 없음 → HTTP API로 transfer + play
+            // SDK가 아직 컨텍스트 없음 → transfer + HTTP resume + SDK가 컨텍스트 잡을 때까지 폴링
             await ensureSpotifyDevice(true);
             try { await spotify.resume(deviceIdRef.current); } catch (e) {}
+            // SDK가 state를 잡으면 한 번 더 sdkResume — paused 상태로 멈춘 경우 복구
+            for (let i = 0; i < 10; i++) {
+              await new Promise(r => setTimeout(r, 200));
+              const s = await spotify.getSdkState();
+              if (s) {
+                if (s.paused) {
+                  try { await spotify.sdkResume(); } catch (e) {}
+                }
+                break;
+              }
+            }
           }
         }
       } else if (activeTab === 'youtube') {
