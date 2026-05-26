@@ -926,7 +926,7 @@ export default function App() {
         onClick={() => setSettingsOpen(true)}
         title="설정"
         style={{
-          position: 'fixed', bottom: 20, right: 76, zIndex: 51,
+          position: 'fixed', bottom: 20, right: 20, zIndex: 51,
           width: 48, height: 48, borderRadius: 999,
           border: 'none', cursor: 'pointer',
           backgroundColor: '#1a1a1a', color: '#fff',

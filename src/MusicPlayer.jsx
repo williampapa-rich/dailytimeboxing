@@ -327,7 +327,7 @@ export default function MusicPlayer() {
         onClick={() => setIsOpen(v => !v)}
         title="음악 플레이어"
         style={{
-          position: 'fixed', bottom: 20, right: 20, zIndex: 51,
+          position: 'fixed', bottom: 20, right: 76, zIndex: 51,
           height: 48, minWidth: 48,
           width: track && playing ? 'auto' : 48,
           maxWidth: 260,
@@ -377,7 +377,7 @@ export default function MusicPlayer() {
         ref={panelRef}
         aria-hidden={!isOpen}
         style={{
-          position: 'fixed', bottom: 78, right: 20, zIndex: 52,
+          position: 'fixed', bottom: 78, right: 76, zIndex: 52,
           width: 380, maxHeight: 'calc(100vh - 100px)',
           display: 'flex', flexDirection: 'column',
           backgroundColor: '#1a1a2e', color: '#fff',
