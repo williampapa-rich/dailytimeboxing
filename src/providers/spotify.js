@@ -130,14 +130,20 @@ async function api(path, init = {}, token) {
     ...init,
     headers: { 'Authorization': 'Bearer ' + t, 'Content-Type': 'application/json', ...(init.headers || {}) },
   });
-  if (r.status === 204) return null;
   if (!r.ok) {
     const text = await r.text();
-    const err = new Error('spotify api: ' + r.status + ' ' + text);
+    let msg = text;
+    try {
+      const j = JSON.parse(text);
+      msg = j.error?.message || j.error?.reason || j.message || text;
+    } catch (e) {}
+    const err = new Error('Spotify ' + r.status + ': ' + msg);
     err.status = r.status;
     throw err;
   }
-  return r.json();
+  if (r.status === 204) return null;
+  const text = await r.text();
+  return text ? JSON.parse(text) : null;
 }
 
 export async function getMe(token) { return api('/v1/me', {}, token); }
