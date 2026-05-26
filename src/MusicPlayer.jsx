@@ -250,16 +250,23 @@ export default function MusicPlayer() {
   };
 
   const togglePlay = async () => {
+    console.log('[togglePlay] start', { activeTab, playing, deviceId: deviceIdRef.current });
     try {
       if (activeTab === 'spotify') {
         if (playing) {
+          console.log('[togglePlay] pausing');
           await spotify.pause(deviceIdRef.current);
         } else {
+          console.log('[togglePlay] stopping other');
           await stopOtherProvider('spotify');
-          // 토큰 명시적 갱신
-          await spotify.getValidToken();
+          console.log('[togglePlay] getValidToken');
+          const tok = await spotify.getValidToken();
+          console.log('[togglePlay] token?', !!tok);
+          console.log('[togglePlay] transfer');
           await ensureSpotifyDevice(true);
-          try { await spotify.resume(deviceIdRef.current); } catch (e) { console.warn('[spotify resume]', e); }
+          console.log('[togglePlay] resume');
+          try { await spotify.resume(deviceIdRef.current); } catch (e) { console.warn('[togglePlay] resume err', e); }
+          console.log('[togglePlay] done');
         }
       } else if (activeTab === 'youtube') {
         if (playing) {
