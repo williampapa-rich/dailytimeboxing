@@ -17,27 +17,20 @@ function getRedirectTo() {
   return window.location.origin + window.location.pathname;
 }
 
-export async function linkGoogleIdentity() {
-  return supabase.auth.linkIdentity({
-    provider: 'google',
-    options: { redirectTo: getRedirectTo() },
-  });
-}
+const GOOGLE_CLIENT_ID = '260153692177-3m6mukkrtsnv68hib6uvppbk451a6kg5.apps.googleusercontent.com';
 
 export async function signInWithGoogle() {
-  try {
-    await fetch(`${SUPABASE_URL}/auth/v1/logout`, {
-      method: 'POST',
-      credentials: 'include',
-      headers: { 'apikey': SUPABASE_PUBLISHABLE_KEY },
-    });
-  } catch (e) {}
-  cachedUserId = null;
-  try { await supabase.auth.signOut({ scope: 'local' }); } catch (e) {}
-  return supabase.auth.signInWithOAuth({
-    provider: 'google',
-    options: { redirectTo: getRedirectTo() },
+  const nonce = [...crypto.getRandomValues(new Uint8Array(16))].map(b => b.toString(16).padStart(2, '0')).join('');
+  sessionStorage.setItem('dtb-google-nonce', nonce);
+  const params = new URLSearchParams({
+    client_id: GOOGLE_CLIENT_ID,
+    redirect_uri: getRedirectTo(),
+    response_type: 'id_token',
+    scope: 'openid email profile',
+    nonce,
+    prompt: 'select_account',
   });
+  window.location.href = `https://accounts.google.com/o/oauth2/v2/auth?${params}`;
 }
 
 export async function signOut() {

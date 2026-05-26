@@ -27,8 +27,29 @@ async function handleOAuthCallbacks() {
   const params = new URLSearchParams(window.location.search);
 
   if (params.get('error_code')) {
-    try { await supabase.auth.signOut({ scope: 'local' }); } catch (_) {}
     window.history.replaceState({}, '', window.location.pathname);
+  }
+
+  // Google ID token callback (from direct Google OAuth, not Supabase authorize)
+  if (window.location.hash.includes('id_token=') && !window.location.hash.includes('youtube')) {
+    const hashParams = new URLSearchParams(window.location.hash.substring(1));
+    const idToken = hashParams.get('id_token');
+    if (idToken) {
+      try {
+        const nonce = sessionStorage.getItem('dtb-google-nonce') || undefined;
+        sessionStorage.removeItem('dtb-google-nonce');
+        const { error } = await supabase.auth.signInWithIdToken({
+          provider: 'google',
+          token: idToken,
+          nonce,
+        });
+        if (error) console.error('[google id_token]', error);
+      } catch (e) {
+        console.error('[google id_token]', e);
+      } finally {
+        window.history.replaceState({}, '', window.location.pathname);
+      }
+    }
   }
 
   const state = params.get('state') || '';
