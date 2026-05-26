@@ -39,11 +39,13 @@ export default function MusicPlayer() {
   // Spotify player state
   const [playlists, setPlaylists] = useState([]);
   const [playlistDropdownOpen, setPlaylistDropdownOpen] = useState(false);
+  const [dropdownDir, setDropdownDir] = useState('up');
   const [selectedPlaylist, setSelectedPlaylist] = useState(null);
   const [track, setTrack] = useState(null);
   const [playing, setPlaying] = useState(false);
   const [premiumRequired, setPremiumRequired] = useState(false);
   const deviceIdRef = useRef(null);
+  const playlistBtnRef = useRef(null);
 
   useEffect(() => {
     const m = window.matchMedia('(max-width: 760px)');
@@ -198,37 +200,35 @@ export default function MusicPlayer() {
     } catch (e) { setErr(e.message); }
   };
 
-  if (collapsed) {
-    return (
-      <button
-        onClick={() => setCollapsed(false)}
-        title="플레이어 열기"
-        style={{
-          position: 'fixed', bottom: 20, right: 20, zIndex: 50,
-          width: 48, height: 48, borderRadius: '50%',
-          backgroundColor: T.bg, color: T.accent,
-          border: `1px solid ${T.border}`, cursor: 'pointer',
-          boxShadow: '0 8px 24px rgba(0,0,0,0.25)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-        }}
-      >
-        {activeTab === 'spotify' ? <SpotifyIcon size={22} /> : <YoutubeIcon size={22} />}
-      </button>
-    );
-  }
+  const togglePlaylistDropdown = () => {
+    if (playlistDropdownOpen) {
+      setPlaylistDropdownOpen(false);
+      return;
+    }
+    const btn = playlistBtnRef.current;
+    if (btn) {
+      const rect = btn.getBoundingClientRect();
+      const above = rect.top;
+      const below = window.innerHeight - rect.bottom;
+      setDropdownDir(below > above ? 'down' : 'up');
+    }
+    setPlaylistDropdownOpen(true);
+  };
 
   return (
     <div
       style={{
         position: 'fixed', bottom: 20, right: 20, zIndex: 50,
-        width: 340, borderRadius: 12, overflow: 'hidden',
+        width: collapsed ? 56 : 340, borderRadius: collapsed ? '50%' : 12, overflow: 'hidden',
         backgroundColor: T.bg, color: T.text,
         border: `1px solid ${T.border}`,
         boxShadow: '0 12px 32px rgba(0,0,0,0.3)',
         fontFamily: 'inherit',
+        transition: 'width 0.18s, border-radius 0.18s',
       }}
     >
       {/* Tabs */}
+      {!collapsed && (
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         padding: '8px 10px', borderBottom: `1px solid ${T.border}`,
@@ -268,9 +268,25 @@ export default function MusicPlayer() {
           </button>
         </div>
       </div>
+      )}
 
-      {/* Body */}
-      <div style={{ padding: '14px 14px 12px' }}>
+      {/* Collapsed bubble (also serves as expand toggle) */}
+      {collapsed && (
+        <button
+          onClick={() => setCollapsed(false)}
+          title="플레이어 열기"
+          style={{
+            width: 56, height: 56, border: 'none', cursor: 'pointer',
+            backgroundColor: 'transparent', color: T.accent,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}
+        >
+          {activeTab === 'spotify' ? <SpotifyIcon size={26} /> : <YoutubeIcon size={26} />}
+        </button>
+      )}
+
+      {/* Body (hidden when collapsed) */}
+      <div style={{ padding: '14px 14px 12px', display: collapsed ? 'none' : 'block' }}>
         {!connected[activeTab] ? (
           <div style={{ textAlign: 'center', padding: '12px 4px 4px' }}>
             <div style={{ fontSize: 12, color: T.sub, marginBottom: 12, whiteSpace: 'pre-line' }}>
@@ -296,7 +312,8 @@ export default function MusicPlayer() {
             {/* Playlist selector */}
             <div style={{ position: 'relative', marginBottom: 12 }}>
               <button
-                onClick={() => setPlaylistDropdownOpen(v => !v)}
+                ref={playlistBtnRef}
+                onClick={togglePlaylistDropdown}
                 style={{
                   width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                   padding: '8px 10px', borderRadius: 6,
@@ -311,10 +328,14 @@ export default function MusicPlayer() {
               </button>
               {playlistDropdownOpen && playlists.length > 0 && (
                 <div style={{
-                  position: 'absolute', bottom: '100%', left: 0, right: 0, marginBottom: 4,
-                  maxHeight: 240, overflowY: 'auto',
+                  position: 'absolute',
+                  ...(dropdownDir === 'up'
+                    ? { bottom: '100%', marginBottom: 4, boxShadow: '0 -4px 16px rgba(0,0,0,0.4)' }
+                    : { top: '100%', marginTop: 4, boxShadow: '0 4px 16px rgba(0,0,0,0.4)' }),
+                  left: 0, right: 0,
+                  maxHeight: 260, overflowY: 'auto',
                   backgroundColor: T.bg, border: `1px solid ${T.border}`, borderRadius: 6,
-                  boxShadow: '0 -4px 16px rgba(0,0,0,0.4)', zIndex: 10,
+                  zIndex: 10,
                 }}>
                   {playlists.map(p => {
                     const name = activeTab === 'spotify' ? p.name : p.snippet?.title;
@@ -353,15 +374,6 @@ export default function MusicPlayer() {
                 인앱 재생은 Spotify Premium 전용입니다. 플레이리스트를 누르면 Spotify 앱에서 열려요.
               </div>
             )}
-
-            {/* YouTube iframe - audio only, kept in DOM but invisible */}
-            <div style={{
-              position: 'absolute', width: 1, height: 1,
-              opacity: 0, pointerEvents: 'none', overflow: 'hidden',
-              left: -9999, top: -9999,
-            }}>
-              <div id="dtb-youtube-iframe" />
-            </div>
 
             {/* Now playing */}
             <div style={{ marginBottom: 14, display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -422,6 +434,15 @@ export default function MusicPlayer() {
             )}
           </>
         )}
+      </div>
+
+      {/* YouTube iframe - always mounted (hidden), so audio survives collapse/tab switch */}
+      <div style={{
+        position: 'absolute', width: 1, height: 1,
+        opacity: 0, pointerEvents: 'none', overflow: 'hidden',
+        left: -9999, top: -9999,
+      }}>
+        <div id="dtb-youtube-iframe" />
       </div>
     </div>
   );
