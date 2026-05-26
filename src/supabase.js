@@ -19,17 +19,6 @@ function getRedirectTo() {
   return window.location.origin + window.location.pathname;
 }
 
-export async function linkGoogleIdentity() {
-  const result = await supabase.auth.linkIdentity({
-    provider: 'google',
-    options: { redirectTo: getRedirectTo(), skipBrowserRedirect: true },
-  });
-  if (result.data?.url) {
-    window.location.href = result.data.url;
-  }
-  return result;
-}
-
 export async function signInWithGoogle() {
   const result = await supabase.auth.signInWithOAuth({
     provider: 'google',
