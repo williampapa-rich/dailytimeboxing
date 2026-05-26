@@ -262,23 +262,19 @@ export default function MusicPlayer() {
           if (state) {
             await spotify.sdkResume();
           } else {
-            console.log('[firstPlay] no SDK state, transfer+resume');
-            try { await spotify.sdkResume(); console.log('[firstPlay] preflight sdkResume ok'); } catch (e) { console.warn('[firstPlay] preflight sdkResume err', e); }
+            try { await spotify.sdkResume(); } catch (e) {}
             await ensureSpotifyDevice(true);
-            console.log('[firstPlay] transfer done');
-            try { await spotify.resume(deviceIdRef.current); console.log('[firstPlay] http resume ok'); } catch (e) { console.warn('[firstPlay] http resume err', e); }
+            try { await spotify.resume(deviceIdRef.current); } catch (e) {}
             for (let i = 0; i < 15; i++) {
               await new Promise(r => setTimeout(r, 300));
               const s = await spotify.getSdkState();
-              console.log('[firstPlay] poll', i, s ? { paused: s.paused, position: s.position, track: s.track_window?.current_track?.name } : 'no state');
               if (s) {
                 if (s.paused) {
-                  try { await spotify.sdkResume(); console.log('[firstPlay] retry sdkResume ok'); } catch (e) { console.warn('[firstPlay] retry sdkResume err', e); }
+                  try { await spotify.sdkResume(); } catch (e) {}
                 }
                 break;
               }
             }
-            console.log('[firstPlay] done');
           }
         }
       } else if (activeTab === 'youtube') {
