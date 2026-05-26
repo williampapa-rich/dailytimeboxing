@@ -30,7 +30,6 @@ export default function AuthButton({ C }) {
   const onConnect = async () => {
     setBusy(true); setErr('');
     try {
-      await signOut();
       await signInWithGoogle();
     } catch (e) {
       setErr(e.message || String(e));
