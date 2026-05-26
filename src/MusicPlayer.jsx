@@ -250,23 +250,21 @@ export default function MusicPlayer() {
   };
 
   const togglePlay = async () => {
-    console.log('[togglePlay] start', { activeTab, playing, deviceId: deviceIdRef.current });
     try {
       if (activeTab === 'spotify') {
         if (playing) {
-          console.log('[togglePlay] pausing');
-          await spotify.pause(deviceIdRef.current);
+          await spotify.sdkPause();
         } else {
-          console.log('[togglePlay] stopping other');
           await stopOtherProvider('spotify');
-          console.log('[togglePlay] getValidToken');
-          const tok = await spotify.getValidToken();
-          console.log('[togglePlay] token?', !!tok);
-          console.log('[togglePlay] transfer');
-          await ensureSpotifyDevice(true);
-          console.log('[togglePlay] resume');
-          try { await spotify.resume(deviceIdRef.current); } catch (e) { console.warn('[togglePlay] resume err', e); }
-          console.log('[togglePlay] done');
+          // SDK에 현재 트랙 state가 있는지 확인
+          const state = await spotify.getSdkState();
+          if (state) {
+            await spotify.sdkResume();
+          } else {
+            // SDK가 아직 컨텍스트 없음 → HTTP API로 transfer + play
+            await ensureSpotifyDevice(true);
+            try { await spotify.resume(deviceIdRef.current); } catch (e) {}
+          }
         }
       } else if (activeTab === 'youtube') {
         if (playing) {
@@ -283,8 +281,9 @@ export default function MusicPlayer() {
     try {
       if (activeTab === 'spotify') {
         await stopOtherProvider('spotify');
-        await ensureSpotifyDevice(true);
-        await spotify.next(deviceIdRef.current);
+        const state = await spotify.getSdkState();
+        if (state) await spotify.sdkNext();
+        else { await ensureSpotifyDevice(true); await spotify.next(deviceIdRef.current); }
       } else if (activeTab === 'youtube') {
         await stopOtherProvider('youtube');
         youtube.next();
@@ -295,8 +294,9 @@ export default function MusicPlayer() {
     try {
       if (activeTab === 'spotify') {
         await stopOtherProvider('spotify');
-        await ensureSpotifyDevice(true);
-        await spotify.previous(deviceIdRef.current);
+        const state = await spotify.getSdkState();
+        if (state) await spotify.sdkPrevious();
+        else { await ensureSpotifyDevice(true); await spotify.previous(deviceIdRef.current); }
       } else if (activeTab === 'youtube') {
         await stopOtherProvider('youtube');
         youtube.previous();

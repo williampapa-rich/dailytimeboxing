@@ -287,3 +287,33 @@ export async function initPlayer() {
 }
 
 export function getDeviceId() { return deviceIdValue; }
+
+export async function sdkResume() {
+  if (!playerInstance) return;
+  await playerInstance.resume();
+}
+
+export async function sdkPause() {
+  if (!playerInstance) return;
+  await playerInstance.pause();
+}
+
+export async function sdkTogglePlay() {
+  if (!playerInstance) return;
+  await playerInstance.togglePlay();
+}
+
+export async function sdkNext() {
+  if (!playerInstance) return;
+  await playerInstance.nextTrack();
+}
+
+export async function sdkPrevious() {
+  if (!playerInstance) return;
+  await playerInstance.previousTrack();
+}
+
+export async function getSdkState() {
+  if (!playerInstance) return null;
+  return playerInstance.getCurrentState();
+}
