@@ -137,6 +137,7 @@ async function api(path, init = {}, token) {
       const j = JSON.parse(text);
       msg = j.error?.message || j.error?.reason || j.message || text;
     } catch (e) {}
+    console.warn('[spotify api err]', r.status, path, msg);
     const err = new Error('Spotify ' + r.status + ': ' + msg);
     err.status = r.status;
     throw err;
@@ -215,6 +216,7 @@ export async function searchTracks(query, limit = 20) {
   if (!q) return [];
   const lim = Math.max(1, Math.min(50, parseInt(limit, 10) || 20));
   const url = `/v1/search?q=${encodeURIComponent(q)}&type=track&limit=${lim}`;
+  console.log('[searchTracks] URL:', url);
   const data = await api(url);
   return data?.tracks?.items || [];
 }

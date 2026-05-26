@@ -153,7 +153,7 @@ export default function MusicPlayer() {
         await youtube.initPlayer('dtb-youtube-iframe');
         unsub = youtube.onPlayerState((s) => {
           if (s.track) {
-            setTrack({ name: s.track.name, artist: s.track.artist, albumArt: null });
+            setTrack({ name: s.track.name, artist: s.track.artist, albumArt: s.track.albumArt || null });
             setYtUnplayable(false);
           }
           setPlaying(!!s.playing);

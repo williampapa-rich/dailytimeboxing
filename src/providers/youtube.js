@@ -146,10 +146,16 @@ export async function initPlayer(containerId) {
         onStateChange: (e) => {
           const PLAYING = 1, PAUSED = 2, ENDED = 0;
           const v = ytPlayer.getVideoData ? ytPlayer.getVideoData() : null;
+          const vid = v?.video_id;
           emit({
             playing: e.data === PLAYING,
             ended: e.data === ENDED,
-            track: v ? { name: v.title || '', artist: v.author || '', videoId: v.video_id } : null,
+            track: v ? {
+              name: v.title || '',
+              artist: v.author || '',
+              videoId: vid,
+              albumArt: vid ? `https://i.ytimg.com/vi/${vid}/mqdefault.jpg` : null,
+            } : null,
           });
         },
       },
