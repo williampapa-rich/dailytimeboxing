@@ -1,6 +1,6 @@
 import { getConnection, saveConnection, removeConnection, isExpired } from './tokens.js';
 
-const CLIENT_ID = '0daaf5a973d243079b5183417d87e6c4';
+const CLIENT_ID = '40e06fb59101458d8c51f9b9c45657ff';
 const SCOPES = [
   'streaming',
   'user-read-email',
