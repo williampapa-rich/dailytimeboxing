@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Play, Pause, SkipBack, SkipForward, ChevronDown, Minus, X, RefreshCw, ExternalLink, Search } from 'lucide-react';
+import { Play, Pause, SkipBack, SkipForward, ChevronDown, X, Search, Music } from 'lucide-react';
 import { getConnection, removeConnection } from './providers/tokens.js';
 import * as spotify from './providers/spotify.js';
 import * as youtube from './providers/youtube.js';
@@ -23,20 +23,13 @@ const THEMES = {
   youtube: { bg: '#0F0F0F', accent: '#FF0000', text: '#FFFFFF', sub: '#AAAAAA', border: '#272727' },
 };
 
-function isMobile() {
-  if (typeof window === 'undefined') return false;
-  return window.matchMedia('(max-width: 760px)').matches;
-}
-
 export default function MusicPlayer() {
-  const [mobile, setMobile] = useState(isMobile);
+  const [isOpen, setIsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('spotify');
-  const [collapsed, setCollapsed] = useState(false);
   const [connected, setConnected] = useState({ spotify: false, youtube: false });
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
 
-  // Spotify player state
   const [playlists, setPlaylists] = useState([]);
   const [playlistDropdownOpen, setPlaylistDropdownOpen] = useState(false);
   const [dropdownDir, setDropdownDir] = useState('up');
@@ -56,12 +49,13 @@ export default function MusicPlayer() {
   const deviceIdRef = useRef(null);
   const playlistBtnRef = useRef(null);
   const searchTimerRef = useRef(null);
+  const innerRef = useRef(null);
 
+  // ESC to close
   useEffect(() => {
-    const m = window.matchMedia('(max-width: 760px)');
-    const h = () => setMobile(m.matches);
-    m.addEventListener('change', h);
-    return () => m.removeEventListener('change', h);
+    const onKey = (e) => { if (e.key === 'Escape') setIsOpen(false); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
   }, []);
 
   useEffect(() => {
@@ -74,7 +68,6 @@ export default function MusicPlayer() {
     })();
   }, []);
 
-  // Provider init on tab change
   useEffect(() => {
     setTrack(null);
     setPlaying(false);
@@ -87,7 +80,7 @@ export default function MusicPlayer() {
     setErr('');
   }, [activeTab]);
 
-  // Progress polling (in addition to event-driven updates)
+  // Progress polling
   useEffect(() => {
     if (!playing || seeking) return;
     let cancelled = false;
@@ -96,10 +89,7 @@ export default function MusicPlayer() {
       if (activeTab === 'spotify') {
         try {
           const s = await spotify.getSdkState();
-          if (s) {
-            setPosition(s.position);
-            setDuration(s.duration);
-          }
+          if (s) { setPosition(s.position); setDuration(s.duration); }
         } catch (e) {}
       } else if (activeTab === 'youtube') {
         const p = youtube.getProgress();
@@ -110,7 +100,7 @@ export default function MusicPlayer() {
     return () => { cancelled = true; clearInterval(id); };
   }, [playing, seeking, activeTab]);
 
-  // Spotify init when connected and active
+  // Spotify init
   useEffect(() => {
     if (!connected.spotify || activeTab !== 'spotify') return;
     let unsub = null;
@@ -122,10 +112,7 @@ export default function MusicPlayer() {
         const { deviceId } = await spotify.initPlayer();
         deviceIdRef.current = deviceId;
         unsub = spotify.onPlayerState((s) => {
-          if (s?.error?.code === 'premium_required') {
-            setPremiumRequired(true);
-            return;
-          }
+          if (s?.error?.code === 'premium_required') { setPremiumRequired(true); return; }
           if (s.track) setTrack(s.track);
           setPlaying(!!s.playing);
           if (typeof s.position === 'number') setPosition(s.position);
@@ -134,14 +121,12 @@ export default function MusicPlayer() {
       } catch (e) {
         if (e?.message === 'premium_required') setPremiumRequired(true);
         else setErr(e.message || String(e));
-      } finally {
-        setBusy(false);
-      }
+      } finally { setBusy(false); }
     })();
     return () => { if (unsub) unsub(); };
   }, [connected.spotify, activeTab]);
 
-  // YouTube init when connected and active
+  // YouTube init
   useEffect(() => {
     if (!connected.youtube || activeTab !== 'youtube') return;
     let unsub = null;
@@ -166,63 +151,39 @@ export default function MusicPlayer() {
           setSelectedPlaylist(null);
           setTrack(null);
           setPlaying(false);
-        } else {
-          setErr(e.message || String(e));
-        }
-      } finally {
-        setBusy(false);
-      }
+        } else { setErr(e.message || String(e)); }
+      } finally { setBusy(false); }
     })();
     return () => { if (unsub) unsub(); };
   }, [connected.youtube, activeTab]);
-
-  if (mobile) return null;
 
   const T = THEMES[activeTab];
 
   const onConnect = async (provider) => {
     setErr('');
     try {
-      if (provider === 'spotify') {
-        await spotify.beginAuth();
-      } else if (provider === 'youtube') {
-        await youtube.beginAuth();
-      }
-    } catch (e) {
-      setErr(e.message || String(e));
-    }
+      if (provider === 'spotify') await spotify.beginAuth();
+      else if (provider === 'youtube') await youtube.beginAuth();
+    } catch (e) { setErr(e.message || String(e)); }
   };
 
   const onDisconnect = async (provider) => {
     if (!confirm(`${provider} 연결을 해제할까요?`)) return;
     await removeConnection(provider);
     setConnected(c => ({ ...c, [provider]: false }));
-    setPlaylists([]);
-    setSelectedPlaylist(null);
-    setTrack(null);
-    setPlaying(false);
-    setPremiumRequired(false);
+    setPlaylists([]); setSelectedPlaylist(null); setTrack(null); setPlaying(false); setPremiumRequired(false);
   };
 
   const stopOtherProvider = async (current) => {
     try {
-      if (current === 'spotify') {
-        youtube.pause();
-      } else if (current === 'youtube') {
-        if (connected.spotify && deviceIdRef.current) {
-          await spotify.pause(deviceIdRef.current).catch(() => {});
-        }
-      }
+      if (current === 'spotify') youtube.pause();
+      else if (current === 'youtube' && connected.spotify && deviceIdRef.current) await spotify.pause(deviceIdRef.current).catch(() => {});
     } catch (e) {}
   };
 
-  // play=true로 transfer하면 다른 탭/기기는 자동 정지되고 우리 탭에서 이어재생
   const ensureSpotifyDevice = async (continuePlay = true) => {
     if (!deviceIdRef.current) return;
-    try {
-      await spotify.transferPlayback(deviceIdRef.current, continuePlay);
-      await new Promise(r => setTimeout(r, 600));
-    } catch (e) {}
+    try { await spotify.transferPlayback(deviceIdRef.current, continuePlay); await new Promise(r => setTimeout(r, 600)); } catch (e) {}
   };
 
   const syncSpotifyState = async () => {
@@ -230,34 +191,21 @@ export default function MusicPlayer() {
     try {
       const pb = await spotify.getCurrentPlayback();
       if (!pb || !pb.item) return;
-      setTrack({
-        name: pb.item.name,
-        artist: (pb.item.artists || []).map(a => a.name).join(', '),
-        albumArt: pb.item.album?.images?.[0]?.url || null,
-        uri: pb.item.uri,
-      });
+      setTrack({ name: pb.item.name, artist: (pb.item.artists || []).map(a => a.name).join(', '), albumArt: pb.item.album?.images?.[0]?.url || null, uri: pb.item.uri });
       setPlaying(!!pb.is_playing);
     } catch (e) {}
   };
 
-  // 탭이 보이게 될 때마다 현재 재생 상태 동기화
   useEffect(() => {
-    const onVis = () => {
-      if (document.visibilityState === 'visible') syncSpotifyState();
-    };
+    const onVis = () => { if (document.visibilityState === 'visible') syncSpotifyState(); };
     document.addEventListener('visibilitychange', onVis);
     window.addEventListener('focus', onVis);
-    return () => {
-      document.removeEventListener('visibilitychange', onVis);
-      window.removeEventListener('focus', onVis);
-    };
+    return () => { document.removeEventListener('visibilitychange', onVis); window.removeEventListener('focus', onVis); };
   }, [activeTab, connected.spotify]);
 
-  // SDK 내부에서 종종 튀어나오는 "string did not match" 같은 무해한 메시지는 무시
   const setSafeErr = (e) => {
     const msg = (e && (e.message || String(e))) || '';
-    if (/string did not match/i.test(msg)) return;
-    if (/CloudPlaybackClientError/i.test(msg)) return;
+    if (/string did not match/i.test(msg) || /CloudPlaybackClientError/i.test(msg)) return;
     setErr(msg);
   };
 
@@ -267,64 +215,41 @@ export default function MusicPlayer() {
     setYtUnplayable(false);
     try {
       if (activeTab === 'spotify') {
-        if (premiumRequired) {
-          window.open(pl.external_urls?.spotify || `https://open.spotify.com/playlist/${pl.id}`, '_blank');
-          return;
-        }
+        if (premiumRequired) { window.open(pl.external_urls?.spotify || `https://open.spotify.com/playlist/${pl.id}`, '_blank'); return; }
         await stopOtherProvider('spotify');
         await ensureSpotifyDevice(false);
         await spotify.playPlaylist(pl.id, deviceIdRef.current);
       } else if (activeTab === 'youtube') {
         await stopOtherProvider('youtube');
         youtube.playPlaylist(pl.id);
-        // 5초 안에 영상이 안 잡히면 재생 불가 플리로 간주
-        setTimeout(() => {
-          setTrack((cur) => {
-            if (!cur) setYtUnplayable(true);
-            return cur;
-          });
-        }, 5000);
+        setTimeout(() => { setTrack((cur) => { if (!cur) setYtUnplayable(true); return cur; }); }, 5000);
       }
-    } catch (e) {
-      setSafeErr(e);
-    }
+    } catch (e) { setSafeErr(e); }
   };
 
   const togglePlay = async () => {
     try {
       if (activeTab === 'spotify') {
-        // Safari/iOS autoplay 우회 — 반드시 사용자 제스처 안에서 호출
         await spotify.sdkActivate();
-        if (playing) {
-          await spotify.sdkPause();
-        } else {
+        if (playing) { await spotify.sdkPause(); }
+        else {
           await stopOtherProvider('spotify');
           const state = await spotify.getSdkState();
-          if (state) {
-            await spotify.sdkResume();
-          } else {
+          if (state) { await spotify.sdkResume(); }
+          else {
             try { await spotify.sdkResume(); } catch (e) {}
             await ensureSpotifyDevice(true);
             try { await spotify.resume(deviceIdRef.current); } catch (e) {}
             for (let i = 0; i < 15; i++) {
               await new Promise(r => setTimeout(r, 300));
               const s = await spotify.getSdkState();
-              if (s) {
-                if (s.paused) {
-                  try { await spotify.sdkResume(); } catch (e) {}
-                }
-                break;
-              }
+              if (s) { if (s.paused) try { await spotify.sdkResume(); } catch (e) {} break; }
             }
           }
         }
       } else if (activeTab === 'youtube') {
-        if (playing) {
-          youtube.pause();
-        } else {
-          await stopOtherProvider('youtube');
-          youtube.play();
-        }
+        if (playing) youtube.pause();
+        else { await stopOtherProvider('youtube'); youtube.play(); }
       }
     } catch (e) { setSafeErr(e); }
   };
@@ -336,24 +261,29 @@ export default function MusicPlayer() {
         const state = await spotify.getSdkState();
         if (state) await spotify.sdkNext();
         else { await ensureSpotifyDevice(true); await spotify.next(deviceIdRef.current); }
-      } else if (activeTab === 'youtube') {
-        await stopOtherProvider('youtube');
-        youtube.next();
-      }
+      } else if (activeTab === 'youtube') { await stopOtherProvider('youtube'); youtube.next(); }
     } catch (e) { setSafeErr(e); }
   };
-  // Seek
+
+  const skipPrev = async () => {
+    try {
+      if (activeTab === 'spotify') {
+        await stopOtherProvider('spotify');
+        const state = await spotify.getSdkState();
+        if (state) await spotify.sdkPrevious();
+        else { await ensureSpotifyDevice(true); await spotify.previous(deviceIdRef.current); }
+      } else if (activeTab === 'youtube') { await stopOtherProvider('youtube'); youtube.previous(); }
+    } catch (e) { setSafeErr(e); }
+  };
+
   const onSeekCommit = async (ms) => {
-    setSeeking(false);
-    setPosition(ms);
+    setSeeking(false); setPosition(ms);
     try {
       if (activeTab === 'spotify') {
         const s = await spotify.getSdkState();
         if (s) await spotify.sdkSeek(ms);
         else await spotify.seek(ms, deviceIdRef.current);
-      } else if (activeTab === 'youtube') {
-        youtube.seek(ms / 1000);
-      }
+      } else if (activeTab === 'youtube') youtube.seek(ms / 1000);
     } catch (e) { setSafeErr(e); }
   };
 
@@ -364,10 +294,8 @@ export default function MusicPlayer() {
     if (!searchQuery.trim()) { setSearchResults([]); return; }
     searchTimerRef.current = setTimeout(async () => {
       setSearching(true);
-      try {
-        const items = await spotify.searchTracks(searchQuery.trim(), 20);
-        setSearchResults(items);
-      } catch (e) { setSafeErr(e); }
+      try { const items = await spotify.searchTracks(searchQuery.trim(), 20); setSearchResults(items); }
+      catch (e) { setSafeErr(e); }
       finally { setSearching(false); }
     }, 300);
     return () => { if (searchTimerRef.current) clearTimeout(searchTimerRef.current); };
@@ -379,32 +307,13 @@ export default function MusicPlayer() {
       await spotify.sdkActivate();
       await ensureSpotifyDevice(false);
       await spotify.playUris([tr.uri], deviceIdRef.current);
-      setSearchOpen(false);
-      setSearchQuery('');
-      setSearchResults([]);
-    } catch (e) { setSafeErr(e); }
-  };
-
-  const skipPrev = async () => {
-    try {
-      if (activeTab === 'spotify') {
-        await stopOtherProvider('spotify');
-        const state = await spotify.getSdkState();
-        if (state) await spotify.sdkPrevious();
-        else { await ensureSpotifyDevice(true); await spotify.previous(deviceIdRef.current); }
-      } else if (activeTab === 'youtube') {
-        await stopOtherProvider('youtube');
-        youtube.previous();
-      }
+      setSearchOpen(false); setSearchQuery(''); setSearchResults([]);
     } catch (e) { setSafeErr(e); }
   };
 
   const [dropdownRect, setDropdownRect] = useState(null);
   const togglePlaylistDropdown = () => {
-    if (playlistDropdownOpen) {
-      setPlaylistDropdownOpen(false);
-      return;
-    }
+    if (playlistDropdownOpen) { setPlaylistDropdownOpen(false); return; }
     const btn = playlistBtnRef.current;
     if (btn) {
       const rect = btn.getBoundingClientRect();
@@ -413,379 +322,351 @@ export default function MusicPlayer() {
       const dir = below > above ? 'down' : 'up';
       setDropdownDir(dir);
       const maxH = Math.min(320, Math.max(120, dir === 'down' ? below : above));
-      setDropdownRect({
-        left: rect.left,
-        width: rect.width,
-        top: dir === 'down' ? rect.bottom + 4 : 'auto',
-        bottom: dir === 'up' ? (window.innerHeight - rect.top + 4) : 'auto',
-        maxHeight: maxH,
-      });
+      setDropdownRect({ left: rect.left, width: rect.width, top: dir === 'down' ? rect.bottom + 4 : 'auto', bottom: dir === 'up' ? (window.innerHeight - rect.top + 4) : 'auto', maxHeight: maxH });
     }
     setPlaylistDropdownOpen(true);
   };
 
-  return (
-    <div
-      style={{
-        position: 'fixed', bottom: 20, right: 20, zIndex: 50,
-        width: collapsed ? 56 : 340, borderRadius: collapsed ? '50%' : 12,
-        overflow: 'hidden',
-        backgroundColor: T.bg, color: T.text,
-        border: `1px solid ${T.border}`,
-        boxShadow: '0 12px 32px rgba(0,0,0,0.3)',
-        fontFamily: 'inherit',
-        transition: 'width 0.18s, border-radius 0.18s',
-      }}
-    >
-      <style>{`
-        .dtb-progress {
-          -webkit-appearance: none; appearance: none;
-          width: 100%; height: 14px; background: transparent; cursor: pointer; margin: 0; padding: 0;
-          display: block;
-        }
-        .dtb-progress::-webkit-slider-runnable-track {
-          height: 3px; border-radius: 2px;
-          background: linear-gradient(to right, var(--c) 0, var(--c) var(--p), rgba(255,255,255,0.18) var(--p), rgba(255,255,255,0.18) 100%);
-        }
-        .dtb-progress::-moz-range-track {
-          height: 3px; border-radius: 2px;
-          background: linear-gradient(to right, var(--c) 0, var(--c) var(--p), rgba(255,255,255,0.18) var(--p), rgba(255,255,255,0.18) 100%);
-        }
-        .dtb-progress::-webkit-slider-thumb {
-          -webkit-appearance: none; appearance: none;
-          width: 10px; height: 10px; border-radius: 50%;
-          background: var(--c); border: none; margin-top: -3.5px;
-          box-shadow: 0 1px 3px rgba(0,0,0,0.5);
-        }
-        .dtb-progress::-moz-range-thumb {
-          width: 10px; height: 10px; border-radius: 50%;
-          background: var(--c); border: none;
-          box-shadow: 0 1px 3px rgba(0,0,0,0.5);
-        }
-        .dtb-progress:focus { outline: none; }
-        .dtb-progress-spotify { --c: #1DB954; }
-        .dtb-progress-youtube { --c: #FF0000; }
-      `}</style>
-      {/* Tabs */}
-      {!collapsed && (
-      <div style={{
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '8px 10px', borderBottom: `1px solid ${T.border}`,
-      }}>
-        <div style={{ display: 'flex', gap: 6 }}>
-          {[
-            { id: 'spotify', icon: <SpotifyIcon size={20} /> },
-            { id: 'youtube', icon: <YoutubeIcon size={20} /> },
-          ].map(t => (
-            <button
-              key={t.id}
-              onClick={() => setActiveTab(t.id)}
-              title={t.id}
-              style={{
-                width: 36, height: 32, borderRadius: 6,
-                border: 'none', cursor: 'pointer',
-                backgroundColor: activeTab === t.id ? '#FFFFFF14' : 'transparent',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                opacity: activeTab === t.id ? 1 : 0.55,
-                transition: 'all 0.15s',
-              }}
-            >
-              {t.icon}
-            </button>
-          ))}
-        </div>
-        <div style={{ display: 'flex', gap: 4 }}>
-          {connected.spotify && activeTab === 'spotify' && (
-            <button
-              onClick={() => setSearchOpen(v => !v)}
-              title="곡 검색"
-              style={{ ...iconBtn(searchOpen ? T.accent : T.sub) }}
-            ><Search size={13} /></button>
-          )}
-          {connected[activeTab] && (
-            <button
-              onClick={() => onDisconnect(activeTab)}
-              title="연결 해제"
-              style={iconBtn(T.sub)}
-            ><X size={13} /></button>
-          )}
-          <button onClick={() => setCollapsed(true)} title="접기" style={iconBtn(T.sub)}>
-            <Minus size={14} />
-          </button>
-        </div>
-      </div>
-      )}
+  const handleOverlayClick = (e) => {
+    if (innerRef.current && !innerRef.current.contains(e.target)) setIsOpen(false);
+  };
 
-      {/* Collapsed bubble (also serves as expand toggle) */}
-      {collapsed && (
-        <button
-          onClick={() => setCollapsed(false)}
-          title="플레이어 열기"
+  return (
+    <>
+      {/* Trigger button — fixed bottom-right */}
+      <button
+        onClick={(e) => { e.stopPropagation(); setIsOpen(v => !v); }}
+        title="음악 플레이어"
+        style={{
+          position: 'fixed', bottom: 20, right: 20, zIndex: 51,
+          width: track && playing ? 'auto' : 48, height: 48,
+          minWidth: 48, maxWidth: 280,
+          padding: track && playing ? '0 14px 0 6px' : 0,
+          borderRadius: 999,
+          border: 'none', cursor: 'pointer',
+          backgroundColor: '#1a1a1a', color: '#fff',
+          boxShadow: '0 4px 20px rgba(0,0,0,0.35)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+          transition: 'all 0.2s ease',
+        }}
+      >
+        {track && playing ? (
+          <>
+            {track.albumArt ? (
+              <img src={track.albumArt} alt="" width={36} height={36} style={{ borderRadius: '50%', flexShrink: 0 }} />
+            ) : (
+              <div style={{ width: 36, height: 36, borderRadius: '50%', backgroundColor: T.accent, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <Music size={16} />
+              </div>
+            )}
+            <div style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 12, fontWeight: 600 }}>
+              {track.name}
+            </div>
+          </>
+        ) : (
+          <Music size={20} />
+        )}
+      </button>
+
+      {/* Overlay + Panel — always mounted, toggled via CSS */}
+      <div
+        onClick={handleOverlayClick}
+        aria-hidden={!isOpen}
+        style={{
+          position: 'fixed', inset: 0, zIndex: 52,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          background: 'rgba(0, 0, 0, 0.45)',
+          backdropFilter: 'blur(4px)',
+          opacity: isOpen ? 1 : 0,
+          visibility: isOpen ? 'visible' : 'hidden',
+          pointerEvents: isOpen ? 'auto' : 'none',
+          transition: 'opacity 0.2s ease, visibility 0.2s ease',
+        }}
+      >
+        <div
+          ref={innerRef}
           style={{
-            width: 56, height: 56, border: 'none', cursor: 'pointer',
-            backgroundColor: 'transparent', color: T.accent,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            width: 360, maxHeight: '80vh', overflowY: 'auto',
+            backgroundColor: T.bg, color: T.text,
+            borderRadius: 16, border: `1px solid ${T.border}`,
+            boxShadow: '0 24px 64px rgba(0,0,0,0.5)',
+            transform: isOpen ? 'scale(1) translateY(0)' : 'scale(0.95) translateY(10px)',
+            transition: 'transform 0.2s ease',
           }}
         >
-          {activeTab === 'spotify' ? <SpotifyIcon size={26} /> : <YoutubeIcon size={26} />}
-        </button>
-      )}
+          <style>{`
+            .dtb-progress {
+              -webkit-appearance: none; appearance: none;
+              width: 100%; height: 14px; background: transparent; cursor: pointer; margin: 0; padding: 0; display: block;
+            }
+            .dtb-progress::-webkit-slider-runnable-track {
+              height: 3px; border-radius: 2px;
+              background: linear-gradient(to right, var(--c) 0, var(--c) var(--p), rgba(255,255,255,0.18) var(--p), rgba(255,255,255,0.18) 100%);
+            }
+            .dtb-progress::-moz-range-track {
+              height: 3px; border-radius: 2px;
+              background: linear-gradient(to right, var(--c) 0, var(--c) var(--p), rgba(255,255,255,0.18) var(--p), rgba(255,255,255,0.18) 100%);
+            }
+            .dtb-progress::-webkit-slider-thumb {
+              -webkit-appearance: none; appearance: none;
+              width: 10px; height: 10px; border-radius: 50%;
+              background: var(--c); border: none; margin-top: -3.5px;
+              box-shadow: 0 1px 3px rgba(0,0,0,0.5);
+            }
+            .dtb-progress::-moz-range-thumb {
+              width: 10px; height: 10px; border-radius: 50%;
+              background: var(--c); border: none;
+              box-shadow: 0 1px 3px rgba(0,0,0,0.5);
+            }
+            .dtb-progress:focus { outline: none; }
+            .dtb-progress-spotify { --c: #1DB954; }
+            .dtb-progress-youtube { --c: #FF0000; }
+          `}</style>
 
-      {/* Body (hidden when collapsed) */}
-      <div style={{ padding: '14px 14px 12px', display: collapsed ? 'none' : 'block' }}>
-        {!connected[activeTab] ? (
-          <div style={{ textAlign: 'center', padding: '12px 4px 4px' }}>
-            <div style={{ fontSize: 12, color: T.sub, marginBottom: 12, whiteSpace: 'pre-line' }}>
-              {activeTab === 'spotify'
-                ? 'Spotify 계정을 연결하면\n내 플레이리스트를 재생할 수 있어요'
-                : 'YouTube 계정을 연결하면\n내 플레이리스트를 재생할 수 있어요'}
+          {/* Tab bar */}
+          <div style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            padding: '10px 12px', borderBottom: `1px solid ${T.border}`,
+          }}>
+            <div style={{ display: 'flex', gap: 6 }}>
+              {[
+                { id: 'spotify', icon: <SpotifyIcon size={20} /> },
+                { id: 'youtube', icon: <YoutubeIcon size={20} /> },
+              ].map(t => (
+                <button
+                  key={t.id}
+                  onClick={() => setActiveTab(t.id)}
+                  title={t.id}
+                  style={{
+                    width: 36, height: 32, borderRadius: 6,
+                    border: 'none', cursor: 'pointer',
+                    backgroundColor: activeTab === t.id ? '#FFFFFF14' : 'transparent',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    opacity: activeTab === t.id ? 1 : 0.55,
+                    transition: 'all 0.15s',
+                  }}
+                >{t.icon}</button>
+              ))}
             </div>
-            <button
-              onClick={() => onConnect(activeTab)}
-              style={{
-                display: 'inline-flex', alignItems: 'center', gap: 8,
-                padding: '10px 16px', borderRadius: 999,
-                backgroundColor: T.accent, color: activeTab === 'spotify' ? '#000' : '#fff',
-                border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: 13,
-              }}
-            >
-              {activeTab === 'spotify' ? <SpotifyIcon size={16} color="#000" /> : <YoutubeIcon size={16} />}
-              <span>{activeTab === 'spotify' ? 'Spotify' : 'YouTube'} 연결</span>
-            </button>
+            <div style={{ display: 'flex', gap: 4 }}>
+              {connected.spotify && activeTab === 'spotify' && (
+                <button onClick={() => setSearchOpen(v => !v)} title="곡 검색" style={iconBtn(searchOpen ? T.accent : T.sub)}>
+                  <Search size={13} />
+                </button>
+              )}
+              {connected[activeTab] && (
+                <button onClick={() => onDisconnect(activeTab)} title="연결 해제" style={iconBtn(T.sub)}>
+                  <X size={13} />
+                </button>
+              )}
+            </div>
           </div>
-        ) : (
-          <>
-            {/* Search panel (Spotify only) */}
-            {activeTab === 'spotify' && searchOpen && (
-              <div style={{ marginBottom: 12 }}>
-                <div style={{ position: 'relative', marginBottom: 8 }}>
-                  <Search size={12} color={T.sub} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)' }} />
-                  <input
-                    autoFocus
-                    type="text"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="곡 검색..."
-                    style={{
-                      width: '100%', boxSizing: 'border-box',
-                      padding: '8px 10px 8px 28px', borderRadius: 6,
-                      backgroundColor: '#FFFFFF10', border: `1px solid ${T.border}`,
-                      color: T.text, fontSize: 12, outline: 'none',
-                    }}
-                  />
+
+          {/* Body */}
+          <div style={{ padding: '14px 16px 16px' }}>
+            {!connected[activeTab] ? (
+              <div style={{ textAlign: 'center', padding: '20px 4px' }}>
+                <div style={{ fontSize: 12, color: T.sub, marginBottom: 14, whiteSpace: 'pre-line' }}>
+                  {activeTab === 'spotify'
+                    ? 'Spotify 계정을 연결하면\n내 플레이리스트를 재생할 수 있어요'
+                    : 'YouTube 계정을 연결하면\n내 플레이리스트를 재생할 수 있어요'}
                 </div>
-                {(searching || searchResults.length > 0) && (
-                  <div style={{
-                    maxHeight: 220, overflowY: 'auto',
-                    backgroundColor: '#FFFFFF08', border: `1px solid ${T.border}`, borderRadius: 6,
-                  }}>
-                    {searching ? (
-                      <div style={{ padding: 12, fontSize: 11, color: T.sub, textAlign: 'center' }}>검색 중...</div>
-                    ) : (
-                      searchResults.map(tr => (
-                        <button
-                          key={tr.id}
-                          onClick={() => onPickSearchResult(tr)}
-                          style={{
-                            width: '100%', display: 'flex', alignItems: 'center', gap: 8,
-                            padding: '8px 10px', border: 'none', background: 'transparent',
-                            color: T.text, cursor: 'pointer', textAlign: 'left', fontSize: 12,
-                          }}
-                          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#FFFFFF10'}
-                          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                        >
-                          {tr.album?.images?.[2]?.url && (
-                            <img src={tr.album.images[2].url} alt="" width={32} height={32} style={{ borderRadius: 3, flexShrink: 0 }} />
-                          )}
-                          <div style={{ minWidth: 0, flex: 1 }}>
-                            <div style={{ fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tr.name}</div>
-                            <div style={{ fontSize: 10, color: T.sub, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                              {(tr.artists || []).map(a => a.name).join(', ')}
+                <button
+                  onClick={() => onConnect(activeTab)}
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 8,
+                    padding: '10px 16px', borderRadius: 999,
+                    backgroundColor: T.accent, color: activeTab === 'spotify' ? '#000' : '#fff',
+                    border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: 13,
+                  }}
+                >
+                  {activeTab === 'spotify' ? <SpotifyIcon size={16} color="#000" /> : <YoutubeIcon size={16} />}
+                  <span>{activeTab === 'spotify' ? 'Spotify' : 'YouTube'} 연결</span>
+                </button>
+              </div>
+            ) : (
+              <>
+                {/* Search panel (Spotify only) */}
+                {activeTab === 'spotify' && searchOpen && (
+                  <div style={{ marginBottom: 12 }}>
+                    <div style={{ position: 'relative', marginBottom: 8 }}>
+                      <Search size={12} color={T.sub} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)' }} />
+                      <input
+                        autoFocus
+                        type="text"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        placeholder="곡 검색..."
+                        style={{
+                          width: '100%', boxSizing: 'border-box',
+                          padding: '8px 10px 8px 28px', borderRadius: 6,
+                          backgroundColor: '#FFFFFF10', border: `1px solid ${T.border}`,
+                          color: T.text, fontSize: 12, outline: 'none',
+                        }}
+                      />
+                    </div>
+                    {(searching || searchResults.length > 0) && (
+                      <div style={{ maxHeight: 220, overflowY: 'auto', backgroundColor: '#FFFFFF08', border: `1px solid ${T.border}`, borderRadius: 6 }}>
+                        {searching ? (
+                          <div style={{ padding: 12, fontSize: 11, color: T.sub, textAlign: 'center' }}>검색 중...</div>
+                        ) : searchResults.map(tr => (
+                          <button
+                            key={tr.id}
+                            onClick={() => onPickSearchResult(tr)}
+                            style={{
+                              width: '100%', display: 'flex', alignItems: 'center', gap: 8,
+                              padding: '8px 10px', border: 'none', background: 'transparent',
+                              color: T.text, cursor: 'pointer', textAlign: 'left', fontSize: 12,
+                            }}
+                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#FFFFFF10'}
+                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                          >
+                            {tr.album?.images?.[2]?.url && (
+                              <img src={tr.album.images[2].url} alt="" width={32} height={32} style={{ borderRadius: 3, flexShrink: 0 }} />
+                            )}
+                            <div style={{ minWidth: 0, flex: 1 }}>
+                              <div style={{ fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tr.name}</div>
+                              <div style={{ fontSize: 10, color: T.sub, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                {(tr.artists || []).map(a => a.name).join(', ')}
+                              </div>
                             </div>
-                          </div>
-                        </button>
-                      ))
+                          </button>
+                        ))}
+                      </div>
                     )}
                   </div>
                 )}
-              </div>
-            )}
 
-            {/* Playlist selector */}
-            <div style={{ position: 'relative', marginBottom: 12 }}>
-              <button
-                ref={playlistBtnRef}
-                onClick={togglePlaylistDropdown}
-                style={{
-                  width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                  padding: '8px 10px', borderRadius: 6,
-                  backgroundColor: '#FFFFFF10', border: `1px solid ${T.border}`,
-                  color: T.text, fontSize: 12, fontWeight: 600, cursor: 'pointer',
-                }}
-              >
-                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: selectedPlaylist ? T.text : T.sub }}>
-                  {busy ? '불러오는 중...' : (selectedPlaylist ? (activeTab === 'spotify' ? selectedPlaylist.name : selectedPlaylist.snippet?.title) : '플레이리스트 선택')}
-                </span>
-                <ChevronDown size={14} color={T.sub} />
-              </button>
-              {playlistDropdownOpen && playlists.length > 0 && dropdownRect && (
-                <div style={{
-                  position: 'fixed',
-                  left: dropdownRect.left,
-                  width: dropdownRect.width,
-                  top: dropdownRect.top,
-                  bottom: dropdownRect.bottom,
-                  maxHeight: dropdownRect.maxHeight,
-                  overflowY: 'auto',
-                  backgroundColor: T.bg, border: `1px solid ${T.border}`, borderRadius: 6,
-                  boxShadow: dropdownDir === 'up' ? '0 -4px 16px rgba(0,0,0,0.4)' : '0 4px 16px rgba(0,0,0,0.4)',
-                  zIndex: 100,
-                }}>
-                  {playlists.map(p => {
-                    const name = activeTab === 'spotify' ? p.name : p.snippet?.title;
-                    const thumb = activeTab === 'spotify'
-                      ? p.images?.[0]?.url
-                      : (p.snippet?.thumbnails?.default?.url || p.snippet?.thumbnails?.medium?.url);
-                    return (
-                      <button
-                        key={p.id}
-                        onClick={() => onSelectPlaylist(p)}
-                        style={{
-                          width: '100%', display: 'flex', alignItems: 'center', gap: 8,
-                          padding: '8px 10px', border: 'none', background: 'transparent',
-                          color: T.text, cursor: 'pointer', textAlign: 'left', fontSize: 12,
-                        }}
-                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#FFFFFF10'}
-                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                      >
-                        {thumb && (
-                          <img src={thumb} alt="" width={24} height={24} style={{ borderRadius: 3, flexShrink: 0, objectFit: 'cover' }} />
-                        )}
-                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</span>
-                      </button>
-                    );
-                  })}
+                {/* Playlist selector */}
+                <div style={{ position: 'relative', marginBottom: 12 }}>
+                  <button
+                    ref={playlistBtnRef}
+                    onClick={togglePlaylistDropdown}
+                    style={{
+                      width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                      padding: '8px 10px', borderRadius: 6,
+                      backgroundColor: '#FFFFFF10', border: `1px solid ${T.border}`,
+                      color: T.text, fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                    }}
+                  >
+                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: selectedPlaylist ? T.text : T.sub }}>
+                      {busy ? '불러오는 중...' : (selectedPlaylist ? (activeTab === 'spotify' ? selectedPlaylist.name : selectedPlaylist.snippet?.title) : '플레이리스트 선택')}
+                    </span>
+                    <ChevronDown size={14} color={T.sub} />
+                  </button>
+                  {playlistDropdownOpen && playlists.length > 0 && dropdownRect && (
+                    <div style={{
+                      position: 'fixed', left: dropdownRect.left, width: dropdownRect.width,
+                      top: dropdownRect.top, bottom: dropdownRect.bottom,
+                      maxHeight: dropdownRect.maxHeight, overflowY: 'auto',
+                      backgroundColor: T.bg, border: `1px solid ${T.border}`, borderRadius: 6,
+                      boxShadow: dropdownDir === 'up' ? '0 -4px 16px rgba(0,0,0,0.4)' : '0 4px 16px rgba(0,0,0,0.4)',
+                      zIndex: 100,
+                    }}>
+                      {playlists.map(p => {
+                        const name = activeTab === 'spotify' ? p.name : p.snippet?.title;
+                        const thumb = activeTab === 'spotify'
+                          ? p.images?.[0]?.url
+                          : (p.snippet?.thumbnails?.default?.url || p.snippet?.thumbnails?.medium?.url);
+                        return (
+                          <button
+                            key={p.id}
+                            onClick={() => onSelectPlaylist(p)}
+                            style={{
+                              width: '100%', display: 'flex', alignItems: 'center', gap: 8,
+                              padding: '8px 10px', border: 'none', background: 'transparent',
+                              color: T.text, cursor: 'pointer', textAlign: 'left', fontSize: 12,
+                            }}
+                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#FFFFFF10'}
+                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                          >
+                            {thumb && <img src={thumb} alt="" width={24} height={24} style={{ borderRadius: 3, flexShrink: 0, objectFit: 'cover' }} />}
+                            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
 
-            {/* Premium required notice */}
-            {activeTab === 'spotify' && premiumRequired && (
-              <div style={{
-                fontSize: 11, color: T.sub, marginBottom: 10, padding: 8,
-                backgroundColor: '#FFFFFF08', borderRadius: 6, lineHeight: 1.5,
-              }}>
-                인앱 재생은 Spotify Premium 전용입니다. 플레이리스트를 누르면 Spotify 앱에서 열려요.
-              </div>
-            )}
+                {activeTab === 'spotify' && premiumRequired && (
+                  <div style={{ fontSize: 11, color: T.sub, marginBottom: 10, padding: 8, backgroundColor: '#FFFFFF08', borderRadius: 6, lineHeight: 1.5 }}>
+                    인앱 재생은 Spotify Premium 전용입니다. 플레이리스트를 누르면 Spotify 앱에서 열려요.
+                  </div>
+                )}
 
-            {/* YouTube playlist unplayable notice */}
-            {activeTab === 'youtube' && ytUnplayable && (
-              <div style={{
-                fontSize: 11, color: T.sub, marginBottom: 10, padding: 8,
-                backgroundColor: '#FFFFFF08', borderRadius: 6, lineHeight: 1.5,
-              }}>
-                이 플레이리스트는 임베드 재생이 제한돼 있어요. YouTube에서 직접 만든 플리만 지원합니다 (자동 생성된 믹스/추천 플리는 불가).
-              </div>
-            )}
+                {activeTab === 'youtube' && ytUnplayable && (
+                  <div style={{ fontSize: 11, color: T.sub, marginBottom: 10, padding: 8, backgroundColor: '#FFFFFF08', borderRadius: 6, lineHeight: 1.5 }}>
+                    이 플레이리스트는 임베드 재생이 제한돼 있어요. YouTube에서 직접 만든 플리만 지원합니다.
+                  </div>
+                )}
 
-            {/* Now playing */}
-            <div style={{ marginBottom: 14, display: 'flex', alignItems: 'center', gap: 10 }}>
-              {track?.albumArt && (
-                <img src={track.albumArt} alt="" width={44} height={44} style={{ borderRadius: 4, flexShrink: 0 }} />
-              )}
-              <div style={{ minWidth: 0, flex: 1 }}>
-                <div style={{
-                  fontSize: 13, fontWeight: 700, color: T.text, lineHeight: 1.3,
-                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                }}>
-                  {track?.name || (activeTab === 'spotify' && premiumRequired
-                    ? selectedPlaylist?.name
-                    : '재생할 곡 없음')}
+                {/* Now playing */}
+                <div style={{ marginBottom: 14, display: 'flex', alignItems: 'center', gap: 10 }}>
+                  {track?.albumArt && <img src={track.albumArt} alt="" width={48} height={48} style={{ borderRadius: 6, flexShrink: 0 }} />}
+                  <div style={{ minWidth: 0, flex: 1 }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: T.text, lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {track?.name || (activeTab === 'spotify' && premiumRequired ? selectedPlaylist?.name : '재생할 곡 없음')}
+                    </div>
+                    <div style={{ fontSize: 11, color: T.sub, marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {track?.artist || '—'}
+                    </div>
+                  </div>
                 </div>
-                <div style={{ fontSize: 11, color: T.sub, marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {track?.artist || '—'}
-                </div>
-              </div>
-              {activeTab === 'spotify' && premiumRequired && selectedPlaylist && (
-                <a
-                  href={selectedPlaylist.external_urls?.spotify || `https://open.spotify.com/playlist/${selectedPlaylist.id}`}
-                  target="_blank" rel="noreferrer"
-                  style={{ color: T.accent, display: 'flex', alignItems: 'center' }}
-                  title="Spotify 앱에서 열기"
-                >
-                  <ExternalLink size={14} />
-                </a>
-              )}
-            </div>
 
-            {/* Progress bar */}
-            {!(activeTab === 'spotify' && premiumRequired) && duration > 0 && (
-              <div style={{ marginBottom: 12 }}>
-                <input
-                  type="range"
-                  min={0}
-                  max={duration}
-                  step={1000}
-                  value={seeking ? seekValue : position}
-                  onMouseDown={() => { setSeeking(true); setSeekValue(position); }}
-                  onTouchStart={() => { setSeeking(true); setSeekValue(position); }}
-                  onChange={(e) => setSeekValue(parseInt(e.target.value, 10))}
-                  onMouseUp={(e) => onSeekCommit(parseInt(e.target.value, 10))}
-                  onTouchEnd={(e) => onSeekCommit(parseInt(e.target.value, 10))}
-                  className={`dtb-progress dtb-progress-${activeTab}`}
-                  style={{ '--p': `${Math.min(100, ((seeking ? seekValue : position) / duration) * 100)}%` }}
-                />
-                <div className="dtb-tnum" style={{
-                  display: 'flex', justifyContent: 'space-between',
-                  fontSize: 10, color: T.sub, marginTop: 2, fontVariantNumeric: 'tabular-nums',
-                }}>
-                  <span>{fmtMs(seeking ? seekValue : position)}</span>
-                  <span>{fmtMs(duration)}</span>
-                </div>
-              </div>
-            )}
+                {/* Progress bar */}
+                {!(activeTab === 'spotify' && premiumRequired) && duration > 0 && (
+                  <div style={{ marginBottom: 12 }}>
+                    <input
+                      type="range" min={0} max={duration} step={1000}
+                      value={seeking ? seekValue : position}
+                      onMouseDown={() => { setSeeking(true); setSeekValue(position); }}
+                      onTouchStart={() => { setSeeking(true); setSeekValue(position); }}
+                      onChange={(e) => setSeekValue(parseInt(e.target.value, 10))}
+                      onMouseUp={(e) => onSeekCommit(parseInt(e.target.value, 10))}
+                      onTouchEnd={(e) => onSeekCommit(parseInt(e.target.value, 10))}
+                      className={`dtb-progress dtb-progress-${activeTab}`}
+                      style={{ '--p': `${Math.min(100, ((seeking ? seekValue : position) / duration) * 100)}%` }}
+                    />
+                    <div className="dtb-tnum" style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: T.sub, marginTop: 2, fontVariantNumeric: 'tabular-nums' }}>
+                      <span>{fmtMs(seeking ? seekValue : position)}</span>
+                      <span>{fmtMs(duration)}</span>
+                    </div>
+                  </div>
+                )}
 
-            {/* Controls */}
-            {!(activeTab === 'spotify' && premiumRequired) && (
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 18 }}>
-                <button onClick={skipPrev} style={ctrlBtn(T.text)} title="이전곡"><SkipBack size={18} /></button>
-                <button
-                  onClick={togglePlay}
-                  style={{ ...ctrlBtn('#000'), backgroundColor: T.accent, width: 40, height: 40 }}
-                  title={playing ? '일시정지' : '재생'}
-                >
-                  {playing ? <Pause size={18} fill="#000" /> : <Play size={18} fill="#000" />}
-                </button>
-                <button onClick={skipNext} style={ctrlBtn(T.text)} title="다음곡"><SkipForward size={18} /></button>
-              </div>
-            )}
+                {/* Controls */}
+                {!(activeTab === 'spotify' && premiumRequired) && (
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 18 }}>
+                    <button onClick={skipPrev} style={ctrlBtn(T.text)} title="이전곡"><SkipBack size={18} /></button>
+                    <button
+                      onClick={togglePlay}
+                      style={{ ...ctrlBtn('#000'), backgroundColor: T.accent, width: 44, height: 44 }}
+                      title={playing ? '일시정지' : '재생'}
+                    >
+                      {playing ? <Pause size={20} fill="#000" /> : <Play size={20} fill="#000" />}
+                    </button>
+                    <button onClick={skipNext} style={ctrlBtn(T.text)} title="다음곡"><SkipForward size={18} /></button>
+                  </div>
+                )}
 
-            {err && (
-              <div style={{
-                marginTop: 10, padding: 8, fontSize: 11, color: '#FCA5A5',
-                backgroundColor: 'rgba(248,113,113,0.12)', borderRadius: 6, lineHeight: 1.4,
-              }}>
-                {err}
-                <button
-                  onClick={() => setErr('')}
-                  style={{ float: 'right', background: 'none', border: 'none', color: '#FCA5A5', cursor: 'pointer', padding: 0 }}
-                >×</button>
-              </div>
+                {err && (
+                  <div style={{ marginTop: 10, padding: 8, fontSize: 11, color: '#FCA5A5', backgroundColor: 'rgba(248,113,113,0.12)', borderRadius: 6, lineHeight: 1.4 }}>
+                    {err}
+                    <button onClick={() => setErr('')} style={{ float: 'right', background: 'none', border: 'none', color: '#FCA5A5', cursor: 'pointer', padding: 0 }}>×</button>
+                  </div>
+                )}
+              </>
             )}
-          </>
-        )}
+          </div>
+        </div>
       </div>
 
-      {/* YouTube iframe - always mounted (hidden), so audio survives collapse/tab switch */}
-      <div style={{
-        position: 'absolute', width: 1, height: 1,
-        opacity: 0, pointerEvents: 'none', overflow: 'hidden',
-        left: -9999, top: -9999,
-      }}>
+      {/* YouTube iframe — always mounted, hidden off-screen (never display:none) */}
+      <div style={{ position: 'fixed', width: 1, height: 1, opacity: 0, pointerEvents: 'none', overflow: 'hidden', left: -9999, top: -9999 }}>
         <div id="dtb-youtube-iframe" />
       </div>
-    </div>
+    </>
   );
 }
 
@@ -798,16 +679,15 @@ function fmtMs(ms) {
 
 function iconBtn(color) {
   return {
-    width: 24, height: 24, borderRadius: 4,
+    width: 28, height: 28, borderRadius: 6,
     border: 'none', backgroundColor: 'transparent', color,
-    cursor: 'pointer',
-    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
   };
 }
 
 function ctrlBtn(color) {
   return {
-    width: 32, height: 32, borderRadius: '50%',
+    width: 36, height: 36, borderRadius: '50%',
     border: 'none', backgroundColor: 'transparent', color,
     cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
   };
