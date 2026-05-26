@@ -143,7 +143,12 @@ async function api(path, init = {}, token) {
   }
   if (r.status === 204) return null;
   const text = await r.text();
-  return text ? JSON.parse(text) : null;
+  if (!text) return null;
+  try {
+    return JSON.parse(text);
+  } catch (e) {
+    return null;
+  }
 }
 
 export async function getMe(token) { return api('/v1/me', {}, token); }
