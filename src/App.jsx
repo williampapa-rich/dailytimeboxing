@@ -748,116 +748,124 @@ export default function App() {
         top: 0,
         zIndex: 30
       }}>
-        <div className="max-w-7xl mx-auto" style={{ padding: '12px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <div style={{
-              width: 36, height: 36, borderRadius: 8, backgroundColor: C.accent,
-              display: 'flex', alignItems: 'center', justifyContent: 'center'
-            }}>
-              <Clock size={16} color="white" strokeWidth={2.5} />
-            </div>
-            <div>
-              <h1 style={{ fontSize: 15, fontWeight: 700, lineHeight: 1.2, margin: 0, color: C.text }}>Daily Time Boxing</h1>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 2 }}>
-                <button
-                  onClick={() => setSelectedDate(d => shiftDate(d, -1))}
-                  style={{
-                    background: 'none', border: 'none', cursor: 'pointer', padding: 0,
-                    color: C.textMid, display: 'flex', alignItems: 'center', borderRadius: 4,
-                  }}
-                  title="이전 날짜"
-                >
-                  <ChevronLeft size={14} />
-                </button>
-                <label style={{ position: 'relative', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
-                  <span style={{
-                    fontSize: 11, color: isToday(selectedDate) ? C.textMid : C.accent,
-                    fontWeight: isToday(selectedDate) ? 400 : 600,
-                  }}>
-                    {formatDate(selectedDate)}
-                  </span>
-                  <Calendar size={11} color={C.textMid} />
-                  <input
-                    type="date"
-                    value={toDateString(selectedDate)}
-                    onChange={(e) => {
-                      const parts = e.target.value.split('-');
-                      if (parts.length === 3) {
-                        setSelectedDate(new Date(+parts[0], +parts[1] - 1, +parts[2]));
-                      }
-                    }}
-                    style={{
-                      position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer',
-                      width: '100%', height: '100%',
-                    }}
-                  />
-                </label>
-                <button
-                  onClick={() => setSelectedDate(d => shiftDate(d, 1))}
-                  style={{
-                    background: 'none', border: 'none', cursor: 'pointer', padding: 0,
-                    color: C.textMid, display: 'flex', alignItems: 'center', borderRadius: 4,
-                  }}
-                  title="다음 날짜"
-                >
-                  <ChevronRight size={14} />
-                </button>
-                {!isToday(selectedDate) && (
-                  <button
-                    onClick={() => setSelectedDate(new Date())}
-                    style={{
-                      background: C.accent, border: 'none', cursor: 'pointer',
-                      color: '#fff', fontSize: 9, fontWeight: 700, padding: '2px 6px',
-                      borderRadius: 4, marginLeft: 2,
-                    }}
-                  >
-                    오늘
-                  </button>
-                )}
+        <div className="max-w-7xl mx-auto" style={{ padding: '10px 16px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <div style={{
+                width: 32, height: 32, borderRadius: 8, backgroundColor: C.accent,
+                display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+              }}>
+                <Clock size={14} color="white" strokeWidth={2.5} />
               </div>
+              <h1 style={{ fontSize: 14, fontWeight: 700, lineHeight: 1.2, margin: 0, color: C.text, whiteSpace: 'nowrap' }}>Daily Time Boxing</h1>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <button
+                onClick={toggleTheme}
+                className="dtb-icon-btn"
+                style={{ padding: 6 }}
+                title={theme === 'light' ? '다크 모드로 전환' : '라이트 모드로 전환'}
+              >
+                {theme === 'light' ? <Moon size={14} /> : <Sun size={14} />}
+              </button>
+              <div style={{ display: 'flex', gap: 3, backgroundColor: C.hover, borderRadius: 7, padding: 3 }}>
+                <button
+                  onClick={() => setMode('edit')}
+                  style={{
+                    padding: '5px 10px', borderRadius: 5, fontSize: 12, border: 'none', cursor: 'pointer',
+                    backgroundColor: mode === 'edit' ? C.card : 'transparent',
+                    color: mode === 'edit' ? C.text : C.textMid,
+                    fontWeight: mode === 'edit' ? 600 : 500,
+                    display: 'flex', alignItems: 'center', gap: 4,
+                    boxShadow: mode === 'edit' ? '0 1px 2px rgba(0,0,0,0.08)' : 'none',
+                    transition: 'all 0.15s'
+                  }}
+                >
+                  <Pencil size={11} />
+                  편집
+                </button>
+                <button
+                  onClick={() => { setMode('view'); closeEdit(); }}
+                  style={{
+                    padding: '5px 10px', borderRadius: 5, fontSize: 12, border: 'none', cursor: 'pointer',
+                    backgroundColor: mode === 'view' ? C.card : 'transparent',
+                    color: mode === 'view' ? C.text : C.textMid,
+                    fontWeight: mode === 'view' ? 600 : 500,
+                    display: 'flex', alignItems: 'center', gap: 4,
+                    boxShadow: mode === 'view' ? '0 1px 2px rgba(0,0,0,0.08)' : 'none',
+                    transition: 'all 0.15s'
+                  }}
+                >
+                  <Eye size={11} />
+                  뷰
+                </button>
+              </div>
+              <AuthButton C={C} />
             </div>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          {/* Date navigation - separate row */}
+          <div style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            gap: 8, marginTop: 8, paddingTop: 8,
+            borderTop: `1px solid ${C.border}`,
+          }}>
             <button
-              onClick={toggleTheme}
-              className="dtb-icon-btn"
-              title={theme === 'light' ? '다크 모드로 전환' : '라이트 모드로 전환'}
+              onClick={() => setSelectedDate(d => shiftDate(d, -1))}
+              style={{
+                background: C.hover, border: 'none', cursor: 'pointer',
+                padding: 6, borderRadius: 6,
+                color: C.text, display: 'flex', alignItems: 'center',
+              }}
+              title="이전 날짜"
             >
-              {theme === 'light' ? <Moon size={16} /> : <Sun size={16} />}
+              <ChevronLeft size={16} />
             </button>
-            <div style={{ display: 'flex', gap: 4, backgroundColor: C.hover, borderRadius: 8, padding: 4 }}>
-              <button
-                onClick={() => setMode('edit')}
+            <label style={{ position: 'relative', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
+              <Calendar size={13} color={C.textMid} />
+              <span style={{
+                fontSize: 13, color: isToday(selectedDate) ? C.text : C.accent,
+                fontWeight: 600,
+              }}>
+                {formatDate(selectedDate)}
+              </span>
+              <input
+                type="date"
+                value={toDateString(selectedDate)}
+                onChange={(e) => {
+                  const parts = e.target.value.split('-');
+                  if (parts.length === 3) {
+                    setSelectedDate(new Date(+parts[0], +parts[1] - 1, +parts[2]));
+                  }
+                }}
                 style={{
-                  padding: '6px 12px', borderRadius: 6, fontSize: 13, border: 'none', cursor: 'pointer',
-                  backgroundColor: mode === 'edit' ? C.card : 'transparent',
-                  color: mode === 'edit' ? C.text : C.textMid,
-                  fontWeight: mode === 'edit' ? 600 : 500,
-                  display: 'flex', alignItems: 'center', gap: 6,
-                  boxShadow: mode === 'edit' ? '0 1px 2px rgba(0,0,0,0.08)' : 'none',
-                  transition: 'all 0.15s'
+                  position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer',
+                  width: '100%', height: '100%',
+                }}
+              />
+            </label>
+            <button
+              onClick={() => setSelectedDate(d => shiftDate(d, 1))}
+              style={{
+                background: C.hover, border: 'none', cursor: 'pointer',
+                padding: 6, borderRadius: 6,
+                color: C.text, display: 'flex', alignItems: 'center',
+              }}
+              title="다음 날짜"
+            >
+              <ChevronRight size={16} />
+            </button>
+            {!isToday(selectedDate) && (
+              <button
+                onClick={() => setSelectedDate(new Date())}
+                style={{
+                  background: C.accent, border: 'none', cursor: 'pointer',
+                  color: '#fff', fontSize: 11, fontWeight: 700, padding: '4px 10px',
+                  borderRadius: 6,
                 }}
               >
-                <Pencil size={13} />
-                편집
+                오늘
               </button>
-              <button
-                onClick={() => { setMode('view'); closeEdit(); }}
-                style={{
-                  padding: '6px 12px', borderRadius: 6, fontSize: 13, border: 'none', cursor: 'pointer',
-                  backgroundColor: mode === 'view' ? C.card : 'transparent',
-                  color: mode === 'view' ? C.text : C.textMid,
-                  fontWeight: mode === 'view' ? 600 : 500,
-                  display: 'flex', alignItems: 'center', gap: 6,
-                  boxShadow: mode === 'view' ? '0 1px 2px rgba(0,0,0,0.08)' : 'none',
-                  transition: 'all 0.15s'
-                }}
-              >
-                <Eye size={13} />
-                뷰
-              </button>
-            </div>
-            <AuthButton C={C} />
+            )}
           </div>
         </div>
       </div>
