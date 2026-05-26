@@ -23,6 +23,8 @@ function Loading({ msg }) {
 
 root.render(<Loading msg="연결 중..." />);
 
+let googleSignInDone = false;
+
 async function handleOAuthCallbacks() {
   const params = new URLSearchParams(window.location.search);
 
@@ -38,13 +40,16 @@ async function handleOAuthCallbacks() {
       try {
         const nonce = sessionStorage.getItem('dtb-google-nonce') || undefined;
         sessionStorage.removeItem('dtb-google-nonce');
-        await supabase.auth.signOut();
         const { error } = await supabase.auth.signInWithIdToken({
           provider: 'google',
           token: idToken,
           nonce,
         });
-        if (error) console.error('[google id_token]', error);
+        if (error) {
+          console.error('[google id_token]', error);
+        } else {
+          googleSignInDone = true;
+        }
       } catch (e) {
         console.error('[google id_token]', e);
       } finally {
@@ -78,7 +83,9 @@ async function handleOAuthCallbacks() {
 (async () => {
   try {
     await handleOAuthCallbacks();
-    await ensureSession();
+    if (!googleSignInDone) {
+      await ensureSession();
+    }
     root.render(<App />);
   } catch (err) {
     console.error(err);

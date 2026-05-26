@@ -43,10 +43,19 @@ export function onAuthChange(cb) {
 }
 
 export async function ensureSession() {
+  // Try getSession first (fast, from local storage)
   const { data: { session } } = await supabase.auth.getSession();
   if (session?.user) {
     cachedUserId = session.user.id;
     return session;
+  }
+  // Fallback: verify with server in case local storage hasn't persisted yet
+  const { data: { user } } = await supabase.auth.getUser();
+  if (user) {
+    cachedUserId = user.id;
+    // Re-fetch session now that getUser has refreshed the client state
+    const { data: { session: s2 } } = await supabase.auth.getSession();
+    return s2;
   }
   const { data, error } = await supabase.auth.signInAnonymously();
   if (error) throw error;
