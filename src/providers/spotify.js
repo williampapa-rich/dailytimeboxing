@@ -204,6 +204,27 @@ export async function previous(deviceId) {
   return api(`/v1/me/player/previous${q}`, { method: 'POST' });
 }
 
+export async function seek(positionMs, deviceId) {
+  const q = new URLSearchParams({ position_ms: String(Math.floor(positionMs)) });
+  if (deviceId) q.set('device_id', deviceId);
+  return api(`/v1/me/player/seek?${q.toString()}`, { method: 'PUT' });
+}
+
+export async function searchTracks(query, limit = 20) {
+  if (!query?.trim()) return [];
+  const q = new URLSearchParams({ q: query, type: 'track', limit: String(limit) });
+  const data = await api('/v1/search?' + q.toString());
+  return data?.tracks?.items || [];
+}
+
+export async function playUris(uris, deviceId) {
+  const q = deviceId ? `?device_id=${deviceId}` : '';
+  return api(`/v1/me/player/play${q}`, {
+    method: 'PUT',
+    body: JSON.stringify({ uris }),
+  });
+}
+
 // --- Web Playback SDK ---
 
 let sdkPromise = null;
@@ -318,6 +339,11 @@ export async function sdkNext() {
 export async function sdkPrevious() {
   if (!playerInstance) return;
   await playerInstance.previousTrack();
+}
+
+export async function sdkSeek(positionMs) {
+  if (!playerInstance) return;
+  await playerInstance.seek(Math.floor(positionMs));
 }
 
 export async function getSdkState() {

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Play, Pause, SkipBack, SkipForward, ChevronDown, Minus, X, RefreshCw, ExternalLink } from 'lucide-react';
+import { Play, Pause, SkipBack, SkipForward, ChevronDown, Minus, X, RefreshCw, ExternalLink, Search } from 'lucide-react';
 import { getConnection, removeConnection } from './providers/tokens.js';
 import * as spotify from './providers/spotify.js';
 import * as youtube from './providers/youtube.js';
@@ -45,8 +45,17 @@ export default function MusicPlayer() {
   const [playing, setPlaying] = useState(false);
   const [premiumRequired, setPremiumRequired] = useState(false);
   const [ytUnplayable, setYtUnplayable] = useState(false);
+  const [position, setPosition] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [seeking, setSeeking] = useState(false);
+  const [seekValue, setSeekValue] = useState(0);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  const [searching, setSearching] = useState(false);
   const deviceIdRef = useRef(null);
   const playlistBtnRef = useRef(null);
+  const searchTimerRef = useRef(null);
 
   useEffect(() => {
     const m = window.matchMedia('(max-width: 760px)');
@@ -73,8 +82,33 @@ export default function MusicPlayer() {
     setSelectedPlaylist(null);
     setPremiumRequired(false);
     setYtUnplayable(false);
+    setPosition(0);
+    setDuration(0);
     setErr('');
   }, [activeTab]);
+
+  // Progress polling (in addition to event-driven updates)
+  useEffect(() => {
+    if (!playing || seeking) return;
+    let cancelled = false;
+    const id = setInterval(async () => {
+      if (cancelled) return;
+      if (activeTab === 'spotify') {
+        try {
+          const s = await spotify.getSdkState();
+          if (s) {
+            setPosition(s.position);
+            setDuration(s.duration);
+          }
+        } catch (e) {}
+      } else if (activeTab === 'youtube') {
+        const p = youtube.getProgress();
+        setPosition(p.position);
+        setDuration(p.duration);
+      }
+    }, 1000);
+    return () => { cancelled = true; clearInterval(id); };
+  }, [playing, seeking, activeTab]);
 
   // Spotify init when connected and active
   useEffect(() => {
@@ -94,6 +128,8 @@ export default function MusicPlayer() {
           }
           if (s.track) setTrack(s.track);
           setPlaying(!!s.playing);
+          if (typeof s.position === 'number') setPosition(s.position);
+          if (typeof s.duration === 'number') setDuration(s.duration);
         });
       } catch (e) {
         if (e?.message === 'premium_required') setPremiumRequired(true);
@@ -301,6 +337,49 @@ export default function MusicPlayer() {
       }
     } catch (e) { setSafeErr(e); }
   };
+  // Seek
+  const onSeekCommit = async (ms) => {
+    setSeeking(false);
+    setPosition(ms);
+    try {
+      if (activeTab === 'spotify') {
+        const s = await spotify.getSdkState();
+        if (s) await spotify.sdkSeek(ms);
+        else await spotify.seek(ms, deviceIdRef.current);
+      } else if (activeTab === 'youtube') {
+        youtube.seek(ms / 1000);
+      }
+    } catch (e) { setSafeErr(e); }
+  };
+
+  // Search (Spotify only)
+  useEffect(() => {
+    if (activeTab !== 'spotify' || !searchOpen) return;
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    if (!searchQuery.trim()) { setSearchResults([]); return; }
+    searchTimerRef.current = setTimeout(async () => {
+      setSearching(true);
+      try {
+        const items = await spotify.searchTracks(searchQuery.trim(), 20);
+        setSearchResults(items);
+      } catch (e) { setSafeErr(e); }
+      finally { setSearching(false); }
+    }, 300);
+    return () => { if (searchTimerRef.current) clearTimeout(searchTimerRef.current); };
+  }, [searchQuery, searchOpen, activeTab]);
+
+  const onPickSearchResult = async (tr) => {
+    try {
+      await stopOtherProvider('spotify');
+      await spotify.sdkActivate();
+      await ensureSpotifyDevice(false);
+      await spotify.playUris([tr.uri], deviceIdRef.current);
+      setSearchOpen(false);
+      setSearchQuery('');
+      setSearchResults([]);
+    } catch (e) { setSafeErr(e); }
+  };
+
   const skipPrev = async () => {
     try {
       if (activeTab === 'spotify') {
@@ -382,6 +461,13 @@ export default function MusicPlayer() {
           ))}
         </div>
         <div style={{ display: 'flex', gap: 4 }}>
+          {connected.spotify && activeTab === 'spotify' && (
+            <button
+              onClick={() => setSearchOpen(v => !v)}
+              title="곡 검색"
+              style={{ ...iconBtn(searchOpen ? T.accent : T.sub) }}
+            ><Search size={13} /></button>
+          )}
           {connected[activeTab] && (
             <button
               onClick={() => onDisconnect(activeTab)}
@@ -435,6 +521,62 @@ export default function MusicPlayer() {
           </div>
         ) : (
           <>
+            {/* Search panel (Spotify only) */}
+            {activeTab === 'spotify' && searchOpen && (
+              <div style={{ marginBottom: 12 }}>
+                <div style={{ position: 'relative', marginBottom: 8 }}>
+                  <Search size={12} color={T.sub} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)' }} />
+                  <input
+                    autoFocus
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="곡 검색..."
+                    style={{
+                      width: '100%', boxSizing: 'border-box',
+                      padding: '8px 10px 8px 28px', borderRadius: 6,
+                      backgroundColor: '#FFFFFF10', border: `1px solid ${T.border}`,
+                      color: T.text, fontSize: 12, outline: 'none',
+                    }}
+                  />
+                </div>
+                {(searching || searchResults.length > 0) && (
+                  <div style={{
+                    maxHeight: 220, overflowY: 'auto',
+                    backgroundColor: '#FFFFFF08', border: `1px solid ${T.border}`, borderRadius: 6,
+                  }}>
+                    {searching ? (
+                      <div style={{ padding: 12, fontSize: 11, color: T.sub, textAlign: 'center' }}>검색 중...</div>
+                    ) : (
+                      searchResults.map(tr => (
+                        <button
+                          key={tr.id}
+                          onClick={() => onPickSearchResult(tr)}
+                          style={{
+                            width: '100%', display: 'flex', alignItems: 'center', gap: 8,
+                            padding: '8px 10px', border: 'none', background: 'transparent',
+                            color: T.text, cursor: 'pointer', textAlign: 'left', fontSize: 12,
+                          }}
+                          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#FFFFFF10'}
+                          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                        >
+                          {tr.album?.images?.[2]?.url && (
+                            <img src={tr.album.images[2].url} alt="" width={32} height={32} style={{ borderRadius: 3, flexShrink: 0 }} />
+                          )}
+                          <div style={{ minWidth: 0, flex: 1 }}>
+                            <div style={{ fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tr.name}</div>
+                            <div style={{ fontSize: 10, color: T.sub, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              {(tr.artists || []).map(a => a.name).join(', ')}
+                            </div>
+                          </div>
+                        </button>
+                      ))
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Playlist selector */}
             <div style={{ position: 'relative', marginBottom: 12 }}>
               <button
@@ -543,6 +685,35 @@ export default function MusicPlayer() {
               )}
             </div>
 
+            {/* Progress bar */}
+            {!(activeTab === 'spotify' && premiumRequired) && duration > 0 && (
+              <div style={{ marginBottom: 12 }}>
+                <input
+                  type="range"
+                  min={0}
+                  max={duration}
+                  step={1000}
+                  value={seeking ? seekValue : position}
+                  onMouseDown={() => { setSeeking(true); setSeekValue(position); }}
+                  onTouchStart={() => { setSeeking(true); setSeekValue(position); }}
+                  onChange={(e) => setSeekValue(parseInt(e.target.value, 10))}
+                  onMouseUp={(e) => onSeekCommit(parseInt(e.target.value, 10))}
+                  onTouchEnd={(e) => onSeekCommit(parseInt(e.target.value, 10))}
+                  style={{
+                    width: '100%', accentColor: T.accent,
+                    background: 'transparent', cursor: 'pointer',
+                  }}
+                />
+                <div className="dtb-tnum" style={{
+                  display: 'flex', justifyContent: 'space-between',
+                  fontSize: 10, color: T.sub, marginTop: 2, fontVariantNumeric: 'tabular-nums',
+                }}>
+                  <span>{fmtMs(seeking ? seekValue : position)}</span>
+                  <span>{fmtMs(duration)}</span>
+                </div>
+              </div>
+            )}
+
             {/* Controls */}
             {!(activeTab === 'spotify' && premiumRequired) && (
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 18 }}>
@@ -584,6 +755,13 @@ export default function MusicPlayer() {
       </div>
     </div>
   );
+}
+
+function fmtMs(ms) {
+  const total = Math.max(0, Math.floor((ms || 0) / 1000));
+  const m = Math.floor(total / 60);
+  const s = total % 60;
+  return `${m}:${String(s).padStart(2, '0')}`;
 }
 
 function iconBtn(color) {

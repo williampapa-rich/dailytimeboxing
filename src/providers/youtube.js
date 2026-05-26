@@ -166,3 +166,18 @@ export function play() { ytPlayer?.playVideo?.(); }
 export function pause() { ytPlayer?.pauseVideo?.(); }
 export function next() { ytPlayer?.nextVideo?.(); }
 export function previous() { ytPlayer?.previousVideo?.(); }
+export function seek(seconds) {
+  if (!ytPlayer?.seekTo) return;
+  ytPlayer.seekTo(seconds, true);
+}
+export function getProgress() {
+  if (!ytPlayer?.getCurrentTime) return { position: 0, duration: 0 };
+  try {
+    return {
+      position: (ytPlayer.getCurrentTime() || 0) * 1000,
+      duration: (ytPlayer.getDuration() || 0) * 1000,
+    };
+  } catch (e) {
+    return { position: 0, duration: 0 };
+  }
+}
