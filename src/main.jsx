@@ -38,6 +38,7 @@ async function handleOAuthCallbacks() {
       try {
         const nonce = sessionStorage.getItem('dtb-google-nonce') || undefined;
         sessionStorage.removeItem('dtb-google-nonce');
+        await supabase.auth.signOut();
         const { error } = await supabase.auth.signInWithIdToken({
           provider: 'google',
           token: idToken,
