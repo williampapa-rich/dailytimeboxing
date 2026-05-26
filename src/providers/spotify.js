@@ -136,7 +136,6 @@ async function api(path, init = {}, token) {
       const j = JSON.parse(text);
       msg = j.error?.message || j.error?.reason || j.message || text;
     } catch (e) {}
-    console.warn('[spotify api err]', r.status, path, msg);
     const err = new Error('Spotify ' + r.status + ': ' + msg);
     err.status = r.status;
     throw err;
@@ -210,22 +209,19 @@ export async function seek(positionMs, deviceId) {
   return api(`/v1/me/player/seek?${q.toString()}`, { method: 'PUT' });
 }
 
-export async function searchTracks(query, limit = 20) {
+export async function searchTracks(query) {
   const q = (query || '').trim();
   if (!q) return [];
-  const lim = Math.max(1, Math.min(50, parseInt(limit, 10) || 20));
   const token = await getValidToken();
   if (!token) throw new Error('not connected');
-  // limit 파라미터 빼고 type만 — Spotify가 일부 토큰에 대해 limit 검증을 잘못하는 케이스 우회
-  const u = `https://api.spotify.com/v1/search?type=track&q=${encodeURIComponent(q)}`;
-  console.log('[searchTracks v2] URL:', u);
-  const r = await fetch(u, {
+  // Spotify는 limit 파라미터에 대해 일부 토큰에서 400을 던지는 케이스가 있어 생략(기본 20)
+  const url = `https://api.spotify.com/v1/search?type=track&q=${encodeURIComponent(q)}`;
+  const r = await fetch(url, {
     method: 'GET',
     headers: { 'Authorization': 'Bearer ' + token },
   });
   if (!r.ok) {
     const text = await r.text();
-    console.warn('[searchTracks] err:', r.status, text);
     throw new Error('Spotify ' + r.status + ': ' + text);
   }
   const data = await r.json();
