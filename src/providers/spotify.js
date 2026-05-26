@@ -51,6 +51,7 @@ export async function beginAuth() {
     scope: SCOPES,
     code_challenge_method: 'S256',
     code_challenge: challenge,
+    show_dialog: 'true',
   });
   window.location.assign('https://accounts.spotify.com/authorize?' + params.toString());
 }
