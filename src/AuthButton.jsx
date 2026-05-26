@@ -28,12 +28,12 @@ export default function AuthButton({ C }) {
   if (!loaded) return null;
 
   const onConnect = async () => {
-    setBusy(true); setErr('debug: 시작');
+    setBusy(true); setErr('');
     try {
-      const result = await signInWithGoogle();
-      setErr('debug: result=' + JSON.stringify({ url: !!result?.data?.url, error: result?.error?.message || null }));
+      await signInWithGoogle();
     } catch (e) {
-      setErr('debug: catch=' + (e.message || String(e)));
+      setErr(e.message || String(e));
+      setTimeout(() => setErr(''), 3500);
     } finally { setBusy(false); }
   };
 
@@ -63,10 +63,9 @@ export default function AuthButton({ C }) {
         </button>
         {err && (
           <div style={{
-            position: 'fixed', bottom: 20, left: 20, right: 20,
-            padding: '12px 16px', fontSize: 13, color: '#fff',
-            backgroundColor: '#333', borderRadius: 8, zIndex: 9999,
-            wordBreak: 'break-all',
+            position: 'absolute', top: '100%', right: 0, marginTop: 6,
+            padding: '6px 10px', fontSize: 11, color: C.indicator,
+            backgroundColor: C.indicatorSoft, borderRadius: 6, whiteSpace: 'nowrap',
           }}>{err}</div>
         )}
       </div>
