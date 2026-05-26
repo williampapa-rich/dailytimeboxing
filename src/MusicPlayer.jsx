@@ -255,9 +255,10 @@ export default function MusicPlayer() {
         if (playing) {
           await spotify.pause(deviceIdRef.current);
         } else {
-          // play=true transfer만으로 다른 device 정지 + 우리 device에서 이어재생
           await stopOtherProvider('spotify');
           await ensureSpotifyDevice(true);
+          // transfer 후 명시적 resume — Spotify가 일부 케이스에서 transfer만으론 재생 안 함
+          try { await spotify.resume(deviceIdRef.current); } catch (e) {}
         }
       } else if (activeTab === 'youtube') {
         if (playing) {
