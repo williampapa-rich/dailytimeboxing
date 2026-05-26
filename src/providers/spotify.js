@@ -228,6 +228,20 @@ export async function searchTracks(query) {
   return data?.tracks?.items || [];
 }
 
+export async function getPlaylistTracks(playlistId) {
+  const all = [];
+  let url = `/v1/playlists/${playlistId}/tracks?limit=50&fields=items(track(id,name,uri,duration_ms,artists(name),album(images))),next`;
+  while (url) {
+    const data = await api(url);
+    for (const it of (data.items || [])) {
+      if (it.track) all.push(it.track);
+    }
+    if (data.next) url = data.next.replace('https://api.spotify.com', '');
+    else url = null;
+  }
+  return all;
+}
+
 export async function playUris(uris, deviceId) {
   const q = deviceId ? `?device_id=${deviceId}` : '';
   return api(`/v1/me/player/play${q}`, {
