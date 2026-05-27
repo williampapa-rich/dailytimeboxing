@@ -121,7 +121,7 @@ export default function MusicPlayer({ appColors }) {
         onClick={() => isMobile() ? setMobileAlert(true) : setIsOpen(v => !v)}
         title={t.musicPlayer}
         style={{
-          position: 'fixed', bottom: 20, right: 76, zIndex: 51,
+          position: 'fixed', bottom: 20, left: 20, zIndex: 51,
           height: 48, width: 48, borderRadius: 999, cursor: 'pointer',
           border: AC.border ? `1px solid ${AC.border}` : 'none',
           backgroundColor: AC.card || '#1a1a1a', color: AC.text || '#fff',
@@ -155,7 +155,7 @@ export default function MusicPlayer({ appColors }) {
         onClick={(e) => e.stopPropagation()}
         aria-hidden={!isOpen}
         style={{
-          position: 'fixed', bottom: 78, right: 76, zIndex: 52,
+          position: 'fixed', bottom: 78, left: 20, zIndex: 52,
           width: 380, maxHeight: 'calc(100vh - 100px)',
           display: 'flex', flexDirection: 'column',
           backgroundColor: AC.card || '#1a1a2e', color: AC.text || '#fff',
@@ -166,7 +166,7 @@ export default function MusicPlayer({ appColors }) {
           visibility: isOpen ? 'visible' : 'hidden',
           pointerEvents: isOpen ? 'auto' : 'none',
           transform: isOpen ? 'scale(1) translateY(0)' : 'scale(0.9) translateY(20px)',
-          transformOrigin: 'bottom right',
+          transformOrigin: 'bottom left',
           transition: 'opacity 0.2s ease, visibility 0.2s ease, transform 0.2s ease',
           overflow: 'hidden',
         }}

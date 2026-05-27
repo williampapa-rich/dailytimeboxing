@@ -1,6 +1,6 @@
 import { useState, useEffect, useLayoutEffect, useRef, useCallback } from "react";
-import { Pencil, Eye, Trash2, Plus, Save, Check, X, ChevronLeft, ChevronRight, Calendar } from "lucide-react";
-import { Settings, Share2, Link, MessageCircle, Send, HelpCircle, Maximize, Minimize } from 'lucide-react';
+import { Pencil, Eye, Trash2, Plus, Save, Check, X, ChevronLeft, ChevronRight, Calendar, MoreHorizontal } from "lucide-react";
+import { Settings, Share2, Link, MessageCircle, HelpCircle, Maximize, Minimize } from 'lucide-react';
 import SettingsPanel from "./SettingsPanel.jsx";
 import { THEMES, DEFAULT_THEME } from './themes.js';
 import MusicPlayer from "./MusicPlayer.jsx";
@@ -131,7 +131,7 @@ export default function App() {
   const [themeId, setThemeId] = useState(DEFAULT_THEME);
   const [opacity, setOpacity] = useState(0.3);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [shareOpen, setShareOpen] = useState(false);
+  const [fabOpen, setFabOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
 
@@ -595,7 +595,7 @@ export default function App() {
   };
 
   return (
-    <div className="dtb-root" onClick={() => shareOpen && setShareOpen(false)} style={{ height: '100dvh', display: 'flex', flexDirection: 'column', overflow: mode === 'edit' ? 'hidden' : 'auto', backgroundColor: C.bg, color: C.text, colorScheme: C.scheme, position: 'relative', opacity: loading ? 0 : 1, transition: 'opacity 0.4s ease' }}>
+    <div className="dtb-root" onClick={() => fabOpen && setFabOpen(false)} style={{ height: '100dvh', display: 'flex', flexDirection: 'column', overflow: mode === 'edit' ? 'hidden' : 'auto', backgroundColor: C.bg, color: C.text, colorScheme: C.scheme, position: 'relative', opacity: loading ? 0 : 1, transition: 'opacity 0.4s ease' }}>
       {/* Background image */}
       <div style={{
         position: 'fixed', inset: 0, zIndex: 0,
@@ -614,8 +614,8 @@ export default function App() {
         .dtb-no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         .dtb-tnum { font-variant-numeric: tabular-nums; font-feature-settings: "tnum"; }
         @keyframes dtb-fade-in {
-          from { opacity: 0; transform: scale(0.98) translateY(6px); }
-          to { opacity: 1; transform: scale(1) translateY(0); }
+          from { opacity: 0; transform: scale(0.96); }
+          to { opacity: 1; transform: scale(1); }
         }
 
         .dtb-save-btn {
@@ -772,78 +772,22 @@ export default function App() {
       </button>
 
       <div style={{ flex: 1, minHeight: 0, maxWidth: 1032, margin: '0 auto', padding: '16px 24px', width: '100%', position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', justifyContent: mode === 'view' ? 'center' : 'stretch', transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)' }}>
-        {/* Navigation bar inside content */}
-        <div style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          marginBottom: 12, flexShrink: 0,
-        }}>
-          <div style={{
-            display: 'flex', gap: 2, padding: 3, borderRadius: 12,
-            background: 'linear-gradient(135deg, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.08) 100%)',
-            backdropFilter: 'blur(20px) saturate(1.4)', WebkitBackdropFilter: 'blur(20px) saturate(1.4)',
-            border: '1px solid rgba(255,255,255,0.25)',
-            boxShadow: '0 4px 16px rgba(0,0,0,0.1), inset 0 1px 0 rgba(255,255,255,0.2)',
-          }}>
-            <button
-              onClick={() => setMode('edit')}
-              style={{
-                padding: '6px 14px', borderRadius: 9, fontSize: 12, border: 'none', cursor: 'pointer',
-                backgroundColor: mode === 'edit' ? 'rgba(255,255,255,0.28)' : 'transparent',
-                color: mode === 'edit' ? C.text : C.textMid,
-                fontWeight: mode === 'edit' ? 600 : 500,
-                display: 'flex', alignItems: 'center', gap: 4,
-                backdropFilter: mode === 'edit' ? 'blur(12px)' : 'none',
-                boxShadow: mode === 'edit' ? '0 2px 8px rgba(0,0,0,0.12), inset 0 1px 0 rgba(255,255,255,0.3)' : 'none',
-                transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)'
-              }}
-            >
-              <Pencil size={11} />
-              {t.edit}
-            </button>
-            <button
-              onClick={() => { setMode('view'); closeEdit(); }}
-              style={{
-                padding: '6px 14px', borderRadius: 9, fontSize: 12, border: 'none', cursor: 'pointer',
-                backgroundColor: mode === 'view' ? 'rgba(255,255,255,0.28)' : 'transparent',
-                color: mode === 'view' ? C.text : C.textMid,
-                fontWeight: mode === 'view' ? 600 : 500,
-                display: 'flex', alignItems: 'center', gap: 4,
-                backdropFilter: mode === 'view' ? 'blur(12px)' : 'none',
-                boxShadow: mode === 'view' ? '0 2px 8px rgba(0,0,0,0.12), inset 0 1px 0 rgba(255,255,255,0.3)' : 'none',
-                transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)'
-              }}
-            >
-              <Eye size={11} />
-              {t.view}
-            </button>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <button
-              onClick={() => setSelectedDate(d => shiftDate(d, -1))}
-              style={{ background: C.hover, border: 'none', cursor: 'pointer', padding: 6, borderRadius: 6, color: C.text, display: 'flex', alignItems: 'center' }}
-              title={t.prevDate}
-            ><ChevronLeft size={16} /></button>
-            <label style={{ position: 'relative', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
-              <Calendar size={13} color={C.textMid} />
-              <span style={{ fontSize: 13, color: isToday(selectedDate) ? C.text : C.accent, fontWeight: 600 }}>
-                {formatDate(selectedDate, t)}
-              </span>
-              <input type="date" value={toDateString(selectedDate)}
-                onChange={(e) => { const parts = e.target.value.split('-'); if (parts.length === 3) setSelectedDate(new Date(+parts[0], +parts[1] - 1, +parts[2])); }}
-                style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer', width: '100%', height: '100%' }}
-              />
-            </label>
-            <button
-              onClick={() => setSelectedDate(d => shiftDate(d, 1))}
-              style={{ background: C.hover, border: 'none', cursor: 'pointer', padding: 6, borderRadius: 6, color: C.text, display: 'flex', alignItems: 'center' }}
-              title={t.nextDate}
-            ><ChevronRight size={16} /></button>
-            {!isToday(selectedDate) && (
-              <button onClick={() => setSelectedDate(new Date())}
-                style={{ background: C.accent, border: 'none', cursor: 'pointer', color: '#fff', fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 6 }}
-              >{t.today}</button>
-            )}
-          </div>
+        {/* Date display — centered */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 12, flexShrink: 0, gap: 8 }}>
+          <button onClick={() => setSelectedDate(d => shiftDate(d, -1))} title={t.prevDate}
+            style={{ background: C.hover, border: 'none', cursor: 'pointer', padding: 6, borderRadius: 6, color: C.text, display: 'flex', alignItems: 'center' }}
+          ><ChevronLeft size={16} /></button>
+          <span style={{ fontSize: 14, color: isToday(selectedDate) ? C.text : C.accent, fontWeight: 600 }}>
+            {formatDate(selectedDate, t)}
+          </span>
+          <button onClick={() => setSelectedDate(d => shiftDate(d, 1))} title={t.nextDate}
+            style={{ background: C.hover, border: 'none', cursor: 'pointer', padding: 6, borderRadius: 6, color: C.text, display: 'flex', alignItems: 'center' }}
+          ><ChevronRight size={16} /></button>
+          {!isToday(selectedDate) && (
+            <button onClick={() => setSelectedDate(new Date())}
+              style={{ background: C.accent, border: 'none', cursor: 'pointer', color: '#fff', fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 6 }}
+            >{t.today}</button>
+          )}
         </div>
         {loading ? (
           <div style={{ textAlign: 'center', color: C.textMid, padding: '80px 0' }}>{t.loading}</div>
@@ -895,89 +839,14 @@ export default function App() {
           />
         )}
       </div>
+      {/* Left bottom: Music */}
       <MusicPlayer appColors={C} />
-      {/* Help button — above share */}
-      <button
-        onClick={() => setTutorialOpen(true)}
-        title="?"
-        style={{
-          position: 'fixed', bottom: 132, right: 20, zIndex: 51,
-          width: 48, height: 48, borderRadius: 999,
-          border: `1px solid ${C.border}`, cursor: 'pointer',
-          backgroundColor: C.card, color: C.text,
-          backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
-          boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
-        }}
-      >
-        <HelpCircle size={20} />
-      </button>
 
-      {/* Share button — above settings */}
-      <div onClick={(e) => e.stopPropagation()} style={{ position: 'fixed', bottom: 76, right: 20, zIndex: 51 }}>
-        <button
-          onClick={() => setShareOpen(v => !v)}
-          title={t.share}
-          style={{
-            width: 48, height: 48, borderRadius: 999,
-            border: `1px solid ${C.border}`, cursor: 'pointer',
-            backgroundColor: C.card, color: C.text,
-            backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
-            boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
-          }}
-        >
-          <Share2 size={18} />
-        </button>
-        {/* Share popup */}
-        <div style={{
-          position: 'absolute', bottom: 56, right: 0,
-          width: 200, padding: 8, borderRadius: 12,
-          backgroundColor: C.card, border: `1px solid ${C.border}`,
-          backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
-          boxShadow: '0 8px 32px rgba(0,0,0,0.2)',
-          opacity: shareOpen ? 1 : 0,
-          visibility: shareOpen ? 'visible' : 'hidden',
-          transform: shareOpen ? 'scale(1) translateY(0)' : 'scale(0.9) translateY(10px)',
-          transformOrigin: 'bottom right',
-          transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
-        }}>
-          <div style={{ fontSize: 11, fontWeight: 600, color: C.textMid, padding: '4px 8px 8px', letterSpacing: '0.05em' }}>{t.share}</div>
-          {[
-            { label: copied ? t.copied : t.copyLink, icon: <Link size={14} />, onClick: async () => {
-              try { await navigator.clipboard.writeText('https://timebox.im'); setCopied(true); setTimeout(() => setCopied(false), 2000); } catch (e) {}
-            }},
-            ...(/iPhone|iPad|iPod|Android/i.test(navigator.userAgent) ? [{ label: t.sendSMS, icon: <MessageCircle size={14} />, onClick: () => {
-              const msg = encodeURIComponent(t.shareMessage);
-              window.open(`sms:?body=${msg}`, '_blank');
-              setShareOpen(false);
-            }}] : []),
-          ].map((item, i) => (
-            <button key={i} onClick={item.onClick} style={{
-              width: '100%', display: 'flex', alignItems: 'center', gap: 10,
-              padding: '9px 10px', borderRadius: 8, border: 'none',
-              backgroundColor: 'transparent', color: C.text, cursor: 'pointer',
-              fontSize: 13, fontWeight: 500, textAlign: 'left',
-              transition: 'all 0.15s',
-            }}
-              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = C.hover}
-              onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = C.text; }}
-              onMouseDown={(e) => { e.currentTarget.style.backgroundColor = C.accent; e.currentTarget.style.color = '#fff'; }}
-              onMouseUp={(e) => { e.currentTarget.style.backgroundColor = C.hover; e.currentTarget.style.color = C.text; }}
-            >
-              {item.icon}
-              {item.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Settings button — fixed, right of music button */}
+      {/* Right bottom stack: Edit/View (1), Settings (2), FAB menu (3) */}
+      {/* 1. Edit/View toggle */}
       <button
-        onClick={() => setSettingsOpen(true)}
-        title={t.settings}
+        onClick={() => { if (mode === 'view') setMode('edit'); else { setMode('view'); closeEdit(); } }}
+        title={mode === 'view' ? t.edit : t.view}
         style={{
           position: 'fixed', bottom: 20, right: 20, zIndex: 51,
           width: 48, height: 48, borderRadius: 999,
@@ -989,8 +858,97 @@ export default function App() {
           transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
         }}
       >
-        <Settings size={20} />
+        {mode === 'view' ? <Pencil size={18} /> : <Eye size={18} />}
       </button>
+
+      {/* 2. Settings */}
+      <button
+        onClick={() => setSettingsOpen(true)}
+        title={t.settings}
+        style={{
+          position: 'fixed', bottom: 76, right: 20, zIndex: 51,
+          width: 48, height: 48, borderRadius: 999,
+          border: `1px solid ${C.border}`, cursor: 'pointer',
+          backgroundColor: C.card, color: C.text,
+          backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
+          boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
+        }}
+      >
+        <Settings size={18} />
+      </button>
+
+      {/* 3. FAB menu (share, tutorial, calendar) */}
+      <div onClick={(e) => e.stopPropagation()} style={{ position: 'fixed', bottom: 132, right: 20, zIndex: 51 }}>
+        <button
+          onClick={() => setFabOpen(v => !v)}
+          title="Menu"
+          style={{
+            width: 48, height: 48, borderRadius: 999,
+            border: `1px solid ${C.border}`, cursor: 'pointer',
+            backgroundColor: C.card, color: C.text,
+            backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
+            boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
+            transform: fabOpen ? 'rotate(90deg)' : 'rotate(0deg)',
+          }}
+        >
+          <MoreHorizontal size={20} />
+        </button>
+        {/* FAB speed dial items */}
+        {[
+          { icon: <Calendar size={16} />, label: t.today, isCalendar: true },
+          { icon: <Share2 size={16} />, label: t.share, onClick: async () => {
+            try { await navigator.clipboard.writeText('https://timebox.im'); setCopied(true); setTimeout(() => setCopied(false), 2000); } catch (e) {}
+          }},
+          ...(/iPhone|iPad|iPod|Android/i.test(navigator.userAgent) ? [{ icon: <MessageCircle size={16} />, label: t.sendSMS, onClick: () => {
+            const msg = encodeURIComponent(t.shareMessage);
+            window.open(`sms:?body=${msg}`, '_blank'); setFabOpen(false);
+          }}] : []),
+          { icon: <HelpCircle size={16} />, label: '?', onClick: () => { setTutorialOpen(true); setFabOpen(false); }},
+        ].map((item, i) => (
+          <div key={i} style={{
+            position: 'absolute', bottom: 56 + i * 52, right: 0,
+            display: 'flex', alignItems: 'center', gap: 8, flexDirection: 'row-reverse',
+            opacity: fabOpen ? 1 : 0,
+            transform: fabOpen ? 'translateY(0) scale(1)' : 'translateY(10px) scale(0.8)',
+            pointerEvents: fabOpen ? 'auto' : 'none',
+            transition: `all 0.25s cubic-bezier(0.4, 0, 0.2, 1) ${fabOpen ? i * 0.04 : 0}s`,
+          }}>
+            {item.isCalendar ? (
+              <label style={{
+                width: 40, height: 40, borderRadius: 999, cursor: 'pointer',
+                border: `1px solid ${C.border}`,
+                backgroundColor: C.card, color: C.text,
+                backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
+                boxShadow: '0 2px 12px rgba(0,0,0,0.12)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                position: 'relative',
+              }}>
+                {item.icon}
+                <input type="date" value={toDateString(selectedDate)}
+                  onChange={(e) => { const parts = e.target.value.split('-'); if (parts.length === 3) { setSelectedDate(new Date(+parts[0], +parts[1] - 1, +parts[2])); setFabOpen(false); } }}
+                  style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer', width: '100%', height: '100%' }}
+                />
+              </label>
+            ) : (
+              <button onClick={item.onClick} style={{
+                width: 40, height: 40, borderRadius: 999,
+                border: `1px solid ${C.border}`, cursor: 'pointer',
+                backgroundColor: C.card, color: C.text,
+                backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
+                boxShadow: '0 2px 12px rgba(0,0,0,0.12)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>{item.icon}</button>
+            )}
+            <span style={{ fontSize: 11, fontWeight: 600, color: C.text, whiteSpace: 'nowrap', backgroundColor: C.card, padding: '4px 8px', borderRadius: 6, border: `1px solid ${C.border}`, backdropFilter: 'blur(12px)', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
+              {item.isCalendar ? formatDate(selectedDate, t) : (item.label === '?' ? 'Tutorial' : (copied && item.label === t.share ? t.copied : item.label))}
+            </span>
+          </div>
+        ))}
+      </div>
       <SettingsPanel isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} themeId={themeId} onChangeTheme={changeTheme} opacity={opacity} onChangeOpacity={changeOpacity} C={C} />
       <Tutorial isOpen={tutorialOpen} onClose={() => setTutorialOpen(false)} C={C} />
     </div>
