@@ -1,5 +1,5 @@
 import { useState, useEffect, useLayoutEffect, useRef, useCallback } from "react";
-import { Pencil, Eye, Trash2, Plus, Clock, Save, Check, X, Sun, Moon, ChevronLeft, ChevronRight, Calendar } from "lucide-react";
+import { Pencil, Eye, Trash2, Plus, Clock, Save, Check, X, ChevronLeft, ChevronRight, Calendar } from "lucide-react";
 import { Settings } from 'lucide-react';
 import SettingsPanel from "./SettingsPanel.jsx";
 import MusicPlayer from "./MusicPlayer.jsx";
@@ -13,47 +13,60 @@ const ROW_VERTICAL_MARGIN = 2;
 const MINUTES_PER_DAY = 1440;
 const MIN_PER_SLOT = 30;
 
-const LIGHT_C = {
-  bg: '#F5F4EE',
-  card: '#FFFFFF',
-  cardAlt: '#FAF9F5',
-  border: '#E5E3DC',
-  borderStrong: '#D6D3CA',
-  text: '#1F1E1D',
-  textMid: '#6B6962',
-  textDim: '#9C9A93',
-  hover: '#EBE9E0',
-  accent: '#D97757',
-  accentHover: '#C66848',
-  accentActive: '#B85936',
-  indicator: '#EF4444',
-  indicatorSoft: 'rgba(239,68,68,0.18)',
-  slotBg: 'rgba(235, 233, 224, 0.4)',
-  inputBg: '#FFFFFF',
-  inputBorder: '#D6D3CA',
-  scheme: 'light',
+export const THEMES = {
+  'dark-abstract': {
+    id: 'dark-abstract',
+    name: 'Dark Abstract',
+    bgImage: './themes/dark-abstract.jpg',
+    colors: {
+      bg: 'rgba(10,10,10,0.75)',
+      card: 'rgba(30,28,25,0.85)',
+      cardAlt: 'rgba(22,20,18,0.85)',
+      border: 'rgba(58,54,50,0.6)',
+      borderStrong: '#524C44',
+      text: '#F5F4EE',
+      textMid: '#A8A59B',
+      textDim: '#6B6962',
+      hover: 'rgba(51,48,43,0.7)',
+      accent: '#D97757',
+      accentHover: '#E08866',
+      accentActive: '#EAA188',
+      indicator: '#F87171',
+      indicatorSoft: 'rgba(248,113,113,0.22)',
+      slotBg: 'rgba(58, 54, 50, 0.35)',
+      inputBg: 'rgba(22,20,18,0.85)',
+      inputBorder: '#524C44',
+      scheme: 'dark',
+    },
+  },
+  'light-desert': {
+    id: 'light-desert',
+    name: 'Light Desert',
+    bgImage: './themes/light-desert.jpg',
+    colors: {
+      bg: 'rgba(245,244,238,0.7)',
+      card: 'rgba(255,255,255,0.85)',
+      cardAlt: 'rgba(250,249,245,0.85)',
+      border: 'rgba(229,227,218,0.7)',
+      borderStrong: '#D6D3CA',
+      text: '#1F1E1D',
+      textMid: '#6B6962',
+      textDim: '#9C9A93',
+      hover: 'rgba(235,233,224,0.7)',
+      accent: '#D97757',
+      accentHover: '#C66848',
+      accentActive: '#B85936',
+      indicator: '#EF4444',
+      indicatorSoft: 'rgba(239,68,68,0.18)',
+      slotBg: 'rgba(235, 233, 224, 0.3)',
+      inputBg: 'rgba(255,255,255,0.85)',
+      inputBorder: '#D6D3CA',
+      scheme: 'light',
+    },
+  },
 };
 
-const DARK_C = {
-  bg: '#1A1816',
-  card: '#262320',
-  cardAlt: '#1F1D1A',
-  border: '#3A3632',
-  borderStrong: '#524C44',
-  text: '#F5F4EE',
-  textMid: '#A8A59B',
-  textDim: '#6B6962',
-  hover: '#33302B',
-  accent: '#D97757',
-  accentHover: '#E08866',
-  accentActive: '#EAA188',
-  indicator: '#F87171',
-  indicatorSoft: 'rgba(248,113,113,0.22)',
-  slotBg: 'rgba(58, 54, 50, 0.45)',
-  inputBg: '#1F1D1A',
-  inputBorder: '#524C44',
-  scheme: 'dark',
-};
+const DEFAULT_THEME = 'dark-abstract';
 
 const CLAUDE_COLORS = [
   '#D97757', '#C9A88C', '#A4B07F', '#7FA8A4',
@@ -162,7 +175,7 @@ const getTimerInfo = (boxes) => {
 
 export default function App() {
   const [mode, setMode] = useState('view');
-  const [theme, setTheme] = useState('light');
+  const [themeId, setThemeId] = useState(DEFAULT_THEME);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState(() => new Date());
   const [boxes, setBoxes] = useState([]);
@@ -214,7 +227,9 @@ export default function App() {
     viewObserverRef.current = o;
   }, [measureView]);
 
-  const C = theme === 'dark' ? DARK_C : LIGHT_C;
+  const currentTheme = THEMES[themeId] || THEMES[DEFAULT_THEME];
+  const C = currentTheme.colors;
+  const theme = C.scheme;
   const sw = cw / VISIBLE_SLOTS;
   const tw = sw * SLOTS_PER_DAY;
 
@@ -230,7 +245,7 @@ export default function App() {
     (async () => {
       try {
         const t = await window.storage.get('dtb-theme');
-        if (t?.value === 'dark' || t?.value === 'light') setTheme(t.value);
+        if (t?.value && THEMES[t.value]) setThemeId(t.value);
       } catch (e) {}
       setLoading(false);
     })();
@@ -250,10 +265,10 @@ export default function App() {
     return () => { cancelled = true; };
   }, [selectedDate]);
 
-  const toggleTheme = async () => {
-    const nt = theme === 'light' ? 'dark' : 'light';
-    setTheme(nt);
-    try { await window.storage.set('dtb-theme', nt); } catch (e) {}
+  const changeTheme = async (id) => {
+    if (!THEMES[id]) return;
+    setThemeId(id);
+    try { await window.storage.set('dtb-theme', id); } catch (e) {}
   };
 
   useEffect(() => {
@@ -587,7 +602,14 @@ export default function App() {
   };
 
   return (
-    <div className="dtb-root" style={{ height: '100vh', display: 'flex', flexDirection: 'column', overflow: mode === 'edit' ? 'hidden' : 'auto', backgroundColor: C.bg, color: C.text, colorScheme: C.scheme }}>
+    <div className="dtb-root" style={{ height: '100vh', display: 'flex', flexDirection: 'column', overflow: mode === 'edit' ? 'hidden' : 'auto', backgroundColor: C.bg, color: C.text, colorScheme: C.scheme, position: 'relative' }}>
+      {/* Background image */}
+      <div style={{
+        position: 'fixed', inset: 0, zIndex: 0,
+        backgroundImage: `url(${currentTheme.bgImage})`,
+        backgroundSize: 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat',
+        pointerEvents: 'none',
+      }} />
       <style>{`
         .dtb-root, .dtb-root * {
           font-family: 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, system-ui, Roboto, 'Helvetica Neue', 'Segoe UI', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif;
@@ -762,14 +784,6 @@ export default function App() {
               <h1 style={{ fontSize: 14, fontWeight: 700, lineHeight: 1.2, margin: 0, color: C.text, whiteSpace: 'nowrap' }}>Daily Time Boxing</h1>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <button
-                onClick={toggleTheme}
-                className="dtb-icon-btn"
-                style={{ padding: 6 }}
-                title={theme === 'light' ? '다크 모드로 전환' : '라이트 모드로 전환'}
-              >
-                {theme === 'light' ? <Moon size={14} /> : <Sun size={14} />}
-              </button>
               <div style={{ display: 'flex', gap: 3, backgroundColor: C.hover, borderRadius: 7, padding: 3 }}>
                 <button
                   onClick={() => setMode('edit')}
@@ -871,7 +885,7 @@ export default function App() {
         </div>
       </div>
 
-      <div style={{ flex: 1, minHeight: 0, maxWidth: 860, margin: '0 auto', padding: '24px', width: '100%' }}>
+      <div style={{ flex: 1, minHeight: 0, maxWidth: 860, margin: '0 auto', padding: '24px', width: '100%', position: 'relative', zIndex: 1 }}>
         {loading ? (
           <div style={{ textAlign: 'center', color: C.textMid, padding: '80px 0' }}>불러오는 중...</div>
         ) : mode === 'edit' ? (
@@ -936,7 +950,7 @@ export default function App() {
       >
         <Settings size={20} />
       </button>
-      <SettingsPanel isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} />
+      <SettingsPanel isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} themeId={themeId} onChangeTheme={changeTheme} />
     </div>
   );
 }

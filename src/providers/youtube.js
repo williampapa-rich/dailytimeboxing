@@ -137,16 +137,37 @@ function emit(payload) {
 export async function initPlayer(containerId) {
   const YT = await loadIframeApi();
   if (ytPlayer) return ytPlayer;
+  let realVideoId = null;
+  let adPlaying = false;
   return new Promise((resolve) => {
     ytPlayer = new YT.Player(containerId, {
       width: '100%', height: '100%',
-      playerVars: { autoplay: 0, controls: 0, modestbranding: 1, rel: 0, playsinline: 1 },
+      host: 'https://www.youtube-nocookie.com',
+      playerVars: { autoplay: 0, controls: 0, modestbranding: 1, rel: 0, playsinline: 1, iv_load_policy: 3, disablekb: 1, fs: 0 },
       events: {
-        onReady: () => resolve(ytPlayer),
+        onReady: () => {
+          const v = ytPlayer.getVideoData ? ytPlayer.getVideoData() : null;
+          if (v?.video_id) realVideoId = v.video_id;
+          resolve(ytPlayer);
+        },
         onStateChange: (e) => {
           const PLAYING = 1, PAUSED = 2, ENDED = 0;
           const v = ytPlayer.getVideoData ? ytPlayer.getVideoData() : null;
           const vid = v?.video_id;
+
+          // Ad detection: track when video_id diverges from the real one
+          if (realVideoId && vid && vid !== realVideoId) {
+            if (!adPlaying) {
+              adPlaying = true;
+              emit({ ad: true });
+            }
+          } else if (adPlaying && vid && vid === realVideoId) {
+            adPlaying = false;
+            emit({ ad: false });
+          }
+          // Update realVideoId when not in an ad
+          if (vid && !adPlaying) realVideoId = vid;
+
           emit({
             playing: e.data === PLAYING,
             ended: e.data === ENDED,

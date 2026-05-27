@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { X, Palette, Clock, BarChart3, User, HelpCircle, LogOut } from 'lucide-react';
 import { useAuthUser } from './auth.js';
 import { signInWithGoogle, signOut } from './supabase.js';
+import { THEMES } from './App.jsx';
 
 const GoogleIcon = ({ size = 16 }) => (
   <svg width={size} height={size} viewBox="0 0 48 48" aria-hidden="true">
@@ -20,7 +21,7 @@ const MENU = [
   { key: 'support', icon: HelpCircle, label: '지원' },
 ];
 
-export default function SettingsPanel({ isOpen, onClose }) {
+export default function SettingsPanel({ isOpen, onClose, themeId, onChangeTheme }) {
   const [activeSection, setActiveSection] = useState('account');
   const [busy, setBusy] = useState(false);
   const innerRef = useRef(null);
@@ -263,7 +264,36 @@ export default function SettingsPanel({ isOpen, onClose }) {
             {activeSection === 'themes' && (
               <div>
                 <h2 style={{ fontSize: 18, fontWeight: 700, margin: '0 0 20px', color: '#fff' }}>테마</h2>
-                <p style={{ color: '#888', fontSize: 13 }}>추후 업데이트 예정입니다.</p>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12 }}>
+                  {Object.values(THEMES).map(t => {
+                    const active = themeId === t.id;
+                    return (
+                      <button
+                        key={t.id}
+                        onClick={() => onChangeTheme(t.id)}
+                        style={{
+                          border: active ? '2px solid #D97757' : '2px solid transparent',
+                          borderRadius: 12, overflow: 'hidden', cursor: 'pointer',
+                          backgroundColor: '#1f1f1f', padding: 0, textAlign: 'left',
+                          outline: active ? '2px solid rgba(217,119,87,0.3)' : 'none',
+                          outlineOffset: 2, transition: 'all 0.15s',
+                        }}
+                      >
+                        <div style={{
+                          width: '100%', height: 100,
+                          backgroundImage: `url(${t.bgImage})`,
+                          backgroundSize: 'cover', backgroundPosition: 'center',
+                        }} />
+                        <div style={{ padding: '10px 12px' }}>
+                          <div style={{ fontSize: 13, fontWeight: 600, color: '#fff' }}>{t.name}</div>
+                          <div style={{ fontSize: 11, color: '#888', marginTop: 2 }}>
+                            {t.colors.scheme === 'dark' ? '다크' : '라이트'}
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             )}
 
