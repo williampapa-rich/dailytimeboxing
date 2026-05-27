@@ -294,7 +294,7 @@ const translations = {
 };
 
 const SUPPORTED_LANGS = ['ko', 'en', 'zh', 'es', 'ja'];
-const LANG_NAMES = { ko: '한국어', en: 'English', zh: '中文', es: 'Español', ja: '日本語' };
+const LANG_NAMES = { ko: '🇰🇷 한국어', en: '🇺🇸 English', zh: '🇨🇳 中文', es: '🇪🇸 Español', ja: '🇯🇵 日本語' };
 
 function detectLang() {
   const nav = navigator.language || navigator.userLanguage || 'en';
