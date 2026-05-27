@@ -51,4 +51,4 @@ export const THEMES = {
   },
 };
 
-export const DEFAULT_THEME = 'dark-abstract';
+export const DEFAULT_THEME = 'light-desert';

@@ -8,7 +8,7 @@ const STEPS_KO = [
   { emoji: '⚙️', title: '설정', desc: '테마, 언어, 투명도를\n원하는 대로 커스터마이즈하세요.' },
   { emoji: '🎵', title: '음악', desc: 'Spotify와 YouTube로\n집중 음악을 들으며 작업하세요.\n(데스크톱 전용)' },
   { emoji: '···', title: '더보기 메뉴', desc: '우하단 ··· 버튼을 누르면\n📅 날짜 선택/이동\n🔗 친구에게 공유하기\n❓ 이 튜토리얼 다시보기\n를 할 수 있어요!' },
-  { emoji: '🚀', title: '시작하기', desc: '지금 바로 첫 타임박스를 만들어보세요!\nGoogle 로그인하면 여러 기기에서 동기화됩니다.' },
+  { emoji: '🚀', title: '시작하기', desc: '지금 바로 첫 타임박스를 만들어보세요!\n**Google 로그인하면 여러 기기에서 동기화됩니다.**\n(설정 → Google로 시작하기)' },
 ];
 
 const STEPS_EN = [
@@ -18,7 +18,7 @@ const STEPS_EN = [
   { emoji: '⚙️', title: 'Settings', desc: 'Customize themes, language,\nand opacity to your liking.' },
   { emoji: '🎵', title: 'Music', desc: 'Listen to focus music with\nSpotify and YouTube.\n(Desktop only)' },
   { emoji: '···', title: 'More Menu', desc: 'Tap ··· at bottom-right to:\n📅 Pick a date\n🔗 Share with friends\n❓ Replay this tutorial' },
-  { emoji: '🚀', title: 'Get Started', desc: 'Create your first timebox now!\nSign in with Google to sync across devices.' },
+  { emoji: '🚀', title: 'Get Started', desc: 'Create your first timebox now!\n**Sign in with Google to sync across devices.**\n(Settings → Start with Google)' },
 ];
 
 const STEPS_ZH = [
@@ -28,7 +28,7 @@ const STEPS_ZH = [
   { emoji: '⚙️', title: '设置', desc: '自定义主题、语言\n和不透明度。' },
   { emoji: '🎵', title: '音乐', desc: '用Spotify和YouTube\n播放专注音乐。\n（仅限桌面端）' },
   { emoji: '···', title: '更多菜单', desc: '点击右下角 ··· 可以：\n📅 选择日期\n🔗 分享给朋友\n❓ 重新查看本教程' },
-  { emoji: '🚀', title: '开始', desc: '立即创建第一个时间盒！\n用Google登录可在多设备同步。' },
+  { emoji: '🚀', title: '开始', desc: '立即创建第一个时间盒！\n**用Google登录可在多设备同步。**\n(设置 → 使用Google登录)' },
 ];
 
 const STEPS_ES = [
@@ -38,7 +38,7 @@ const STEPS_ES = [
   { emoji: '⚙️', title: 'Ajustes', desc: 'Personaliza temas, idioma\ny opacidad a tu gusto.' },
   { emoji: '🎵', title: 'Música', desc: 'Escucha música de concentración\ncon Spotify y YouTube.\n(Solo escritorio)' },
   { emoji: '···', title: 'Menú más', desc: 'Toca ··· abajo a la derecha para:\n📅 Elegir fecha\n🔗 Compartir con amigos\n❓ Ver este tutorial de nuevo' },
-  { emoji: '🚀', title: 'Empezar', desc: '¡Crea tu primer timebox ahora!\nInicia sesión con Google para sincronizar.' },
+  { emoji: '🚀', title: 'Empezar', desc: '¡Crea tu primer timebox ahora!\n**Inicia sesión con Google para sincronizar.**\n(Ajustes → Iniciar con Google)' },
 ];
 
 const STEPS_JA = [
@@ -48,7 +48,7 @@ const STEPS_JA = [
   { emoji: '⚙️', title: '設定', desc: 'テーマ、言語、不透明度を\nお好みにカスタマイズ。' },
   { emoji: '🎵', title: '音楽', desc: 'SpotifyとYouTubeで\n集中音楽を聴きながら作業。\n（デスクトップ専用）' },
   { emoji: '···', title: 'もっとメニュー', desc: '右下の ··· をタップすると：\n📅 日付を選択\n🔗 友達にシェア\n❓ このチュートリアルを再表示' },
-  { emoji: '🚀', title: '始めましょう', desc: '今すぐ最初のタイムボックスを作成！\nGoogleログインで複数デバイスと同期。' },
+  { emoji: '🚀', title: '始めましょう', desc: '今すぐ最初のタイムボックスを作成！\n**Googleログインで複数デバイスと同期。**\n(設定 → Googleで始める)' },
 ];
 
 const ALL_STEPS = { ko: STEPS_KO, en: STEPS_EN, zh: STEPS_ZH, es: STEPS_ES, ja: STEPS_JA };
@@ -134,7 +134,13 @@ export default function Tutorial({ isOpen, onClose, C, mode, setMode, setFabOpen
         }}>
           <div style={{ fontSize: 48, marginBottom: 16 }}>{current.emoji}</div>
           <div style={{ fontSize: 20, fontWeight: 700, marginBottom: 10, color: C.text }}>{current.title}</div>
-          <div style={{ fontSize: 13, color: C.textMid, lineHeight: 1.7, whiteSpace: 'pre-line', marginBottom: 28 }}>{current.desc}</div>
+          <div style={{ fontSize: 13, color: C.textMid, lineHeight: 1.7, whiteSpace: 'pre-line', marginBottom: 28 }}>
+            {current.desc.split(/(\*\*[^*]+\*\*)/).map((part, i) =>
+              part.startsWith('**') && part.endsWith('**')
+                ? <strong key={i} style={{ color: C.text, fontWeight: 700 }}>{part.slice(2, -2)}</strong>
+                : part
+            )}
+          </div>
 
           {/* Progress dots */}
           <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginBottom: 20 }}>
