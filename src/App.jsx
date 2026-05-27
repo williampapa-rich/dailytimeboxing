@@ -784,11 +784,11 @@ export default function App() {
         }
       `}</style>
 
-      <div style={{ flex: 1, minHeight: 0, maxWidth: 1032, margin: '0 auto', padding: '16px 24px', width: '100%', position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+      <div style={{ flex: 1, minHeight: 0, maxWidth: 1032, margin: '0 auto', padding: '16px 24px', width: '100%', position: 'relative', zIndex: 1 }}>
         {/* Navigation bar inside content */}
         <div style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          gap: 8, marginBottom: 12, width: '100%', flexShrink: 0,
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          marginBottom: 12, flexShrink: 0,
         }}>
           <div style={{ display: 'flex', gap: 3, backgroundColor: C.hover, borderRadius: 7, padding: 3 }}>
             <button
@@ -821,8 +821,6 @@ export default function App() {
               <Eye size={11} />
               뷰
             </button>
-          </div>
-          <div style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', display: 'flex', alignItems: 'center', gap: 8 }}>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <button
