@@ -1,6 +1,6 @@
 import { useState, useEffect, useLayoutEffect, useRef, useCallback } from "react";
 import { Pencil, Eye, Trash2, Plus, Save, Check, X, ChevronLeft, ChevronRight, Calendar } from "lucide-react";
-import { Settings } from 'lucide-react';
+import { Settings, Share2, Link, MessageCircle, Send } from 'lucide-react';
 import SettingsPanel from "./SettingsPanel.jsx";
 import { THEMES, DEFAULT_THEME } from './themes.js';
 import MusicPlayer from "./MusicPlayer.jsx";
@@ -125,6 +125,8 @@ export default function App() {
   const [themeId, setThemeId] = useState(DEFAULT_THEME);
   const [opacity, setOpacity] = useState(0.3);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
   const [selectedDate, setSelectedDate] = useState(() => new Date());
   const [boxes, setBoxes] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -569,7 +571,7 @@ export default function App() {
   };
 
   return (
-    <div className="dtb-root" style={{ height: '100vh', display: 'flex', flexDirection: 'column', overflow: mode === 'edit' ? 'hidden' : 'auto', backgroundColor: C.bg, color: C.text, colorScheme: C.scheme, position: 'relative' }}>
+    <div className="dtb-root" onClick={() => shareOpen && setShareOpen(false)} style={{ height: '100vh', display: 'flex', flexDirection: 'column', overflow: mode === 'edit' ? 'hidden' : 'auto', backgroundColor: C.bg, color: C.text, colorScheme: C.scheme, position: 'relative' }}>
       {/* Background image */}
       <div style={{
         position: 'fixed', inset: 0, zIndex: 0,
@@ -858,6 +860,64 @@ export default function App() {
         )}
       </div>
       <MusicPlayer appColors={C} />
+      {/* Share button — above settings */}
+      <div onClick={(e) => e.stopPropagation()} style={{ position: 'fixed', bottom: 76, right: 20, zIndex: 51 }}>
+        <button
+          onClick={() => setShareOpen(v => !v)}
+          title="공유하기"
+          style={{
+            width: 48, height: 48, borderRadius: 999,
+            border: `1px solid ${C.border}`, cursor: 'pointer',
+            backgroundColor: C.card, color: C.text,
+            backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
+            boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
+          }}
+        >
+          <Share2 size={18} />
+        </button>
+        {/* Share popup */}
+        <div style={{
+          position: 'absolute', bottom: 56, right: 0,
+          width: 200, padding: 8, borderRadius: 12,
+          backgroundColor: C.card, border: `1px solid ${C.border}`,
+          backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
+          boxShadow: '0 8px 32px rgba(0,0,0,0.2)',
+          opacity: shareOpen ? 1 : 0,
+          visibility: shareOpen ? 'visible' : 'hidden',
+          transform: shareOpen ? 'scale(1) translateY(0)' : 'scale(0.9) translateY(10px)',
+          transformOrigin: 'bottom right',
+          transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+        }}>
+          <div style={{ fontSize: 11, fontWeight: 600, color: C.textMid, padding: '4px 8px 8px', letterSpacing: '0.05em' }}>공유하기</div>
+          {[
+            { label: copied ? '복사 완료!' : '링크 복사', icon: <Link size={14} />, onClick: async () => {
+              try { await navigator.clipboard.writeText('https://timebox.im'); setCopied(true); setTimeout(() => setCopied(false), 2000); } catch (e) {}
+            }},
+            { label: 'SMS 보내기', icon: <MessageCircle size={14} />, onClick: () => {
+              const msg = encodeURIComponent('Daily Time Boxing으로 하루를 계획해보세요!\nhttps://timebox.im');
+              window.open(/iPhone|iPad|iPod|Android/i.test(navigator.userAgent) ? `sms:?body=${msg}` : `sms:?body=${msg}`, '_blank');
+              setShareOpen(false);
+            }},
+          ].map((item, i) => (
+            <button key={i} onClick={item.onClick} style={{
+              width: '100%', display: 'flex', alignItems: 'center', gap: 10,
+              padding: '9px 10px', borderRadius: 8, border: 'none',
+              backgroundColor: 'transparent', color: C.text, cursor: 'pointer',
+              fontSize: 13, fontWeight: 500, textAlign: 'left',
+              transition: 'background 0.15s',
+            }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = C.hover}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+            >
+              {item.icon}
+              {item.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* Settings button — fixed, right of music button */}
       <button
         onClick={() => setSettingsOpen(true)}
