@@ -571,7 +571,7 @@ export default function App() {
   };
 
   return (
-    <div className="dtb-root" onClick={() => shareOpen && setShareOpen(false)} style={{ height: '100vh', display: 'flex', flexDirection: 'column', overflow: mode === 'edit' ? 'hidden' : 'auto', backgroundColor: C.bg, color: C.text, colorScheme: C.scheme, position: 'relative' }}>
+    <div className="dtb-root" onClick={() => shareOpen && setShareOpen(false)} style={{ height: '100vh', display: 'flex', flexDirection: 'column', overflow: mode === 'edit' ? 'hidden' : 'auto', backgroundColor: C.bg, color: C.text, colorScheme: C.scheme, position: 'relative', opacity: loading ? 0 : 1, transition: 'opacity 0.4s ease' }}>
       {/* Background image */}
       <div style={{
         position: 'fixed', inset: 0, zIndex: 0,
