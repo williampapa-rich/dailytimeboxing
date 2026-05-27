@@ -210,7 +210,7 @@ export default function MusicPlayer({ appColors }) {
                       value={spotifyInput}
                       onChange={(e) => setSpotifyInput(e.target.value)}
                       onKeyDown={(e) => { if (e.key === 'Enter') onSpotifyUrlSubmit(); }}
-                      placeholder="Spotify URL"
+                      placeholder="https://open.spotify.com/playlist/..."
                       style={{
                         flex: 1, padding: '8px 10px', borderRadius: 8, fontSize: 12,
                         backgroundColor: AC.hover || 'rgba(255,255,255,0.06)',
@@ -232,7 +232,7 @@ export default function MusicPlayer({ appColors }) {
                     fontSize: 11, color: AC.textMid || '#888', background: 'none', border: 'none', cursor: 'pointer',
                     textDecoration: 'underline', opacity: 0.7,
                   }}>
-                    Spotify URL
+                    🔗 {t.changePlaylist || '플레이리스트 변경'}
                   </button>
                 )}
               </div>
