@@ -906,10 +906,12 @@ export default function App() {
               padding: '9px 10px', borderRadius: 8, border: 'none',
               backgroundColor: 'transparent', color: C.text, cursor: 'pointer',
               fontSize: 13, fontWeight: 500, textAlign: 'left',
-              transition: 'background 0.15s',
+              transition: 'all 0.15s',
             }}
               onMouseEnter={(e) => e.currentTarget.style.backgroundColor = C.hover}
-              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+              onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = C.text; }}
+              onMouseDown={(e) => { e.currentTarget.style.backgroundColor = C.accent; e.currentTarget.style.color = '#fff'; }}
+              onMouseUp={(e) => { e.currentTarget.style.backgroundColor = C.hover; e.currentTarget.style.color = C.text; }}
             >
               {item.icon}
               {item.label}
