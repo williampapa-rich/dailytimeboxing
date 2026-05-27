@@ -668,7 +668,7 @@ export default function MusicPlayer({ appColors }) {
             transition: 'transform 0.25s ease',
           }}
         >
-          <div style={{ fontSize: 32, marginBottom: 12 }}>🎵</div>
+          <div style={{ fontSize: 32, marginBottom: 12 }}>😭</div>
           <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 8 }}>{t.desktopOnly}</div>
           <div style={{ fontSize: 13, color: AC.textMid || '#999', lineHeight: 1.6, marginBottom: 20, whiteSpace: 'pre-line' }}>
             {t.desktopOnlyMsg}
