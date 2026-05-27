@@ -123,7 +123,7 @@ const getTimerInfo = (boxes) => {
 export default function App() {
   const [mode, setMode] = useState('view');
   const [themeId, setThemeId] = useState(DEFAULT_THEME);
-  const [opacity, setOpacity] = useState(0.85);
+  const [opacity, setOpacity] = useState(0.3);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState(() => new Date());
   const [boxes, setBoxes] = useState([]);

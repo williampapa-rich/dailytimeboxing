@@ -241,8 +241,11 @@ export default function SettingsPanel({ isOpen, onClose, themeId, onChangeTheme,
                 ) : (
                   <div style={{ padding: '40px 0', textAlign: 'center' }}>
                     <div style={{ fontSize: 40, marginBottom: 12 }}>👤</div>
-                    <div style={{ fontSize: 15, fontWeight: 600, color: '#fff', marginBottom: 6 }}>로그인하면 더 많은 기능을 사용할 수 있어요</div>
-                    <div style={{ fontSize: 12, color: '#888', marginBottom: 20 }}>타임박스 데이터가 클라우드에 안전하게 저장됩니다</div>
+                    <div style={{ fontSize: 15, fontWeight: 600, color: '#fff', marginBottom: 6 }}>여러 기기에서 사용하고 싶다면?</div>
+                    <div style={{ fontSize: 12, color: '#888', marginBottom: 20, lineHeight: 1.6 }}>
+                      Google 계정으로 가입하면 타임박스 데이터가<br/>
+                      클라우드에 자동 저장되어 어디서든 이어서 쓸 수 있어요.
+                    </div>
                     <button
                       onClick={onGoogleSignIn}
                       disabled={busy}
@@ -298,7 +301,7 @@ export default function SettingsPanel({ isOpen, onClose, themeId, onChangeTheme,
                 {/* Opacity slider */}
                 <div style={{ marginTop: 24 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                    <span style={{ fontSize: 13, fontWeight: 600, color: '#fff' }}>투명도</span>
+                    <span style={{ fontSize: 13, fontWeight: 600, color: '#fff' }}>불투명도</span>
                     <span style={{ fontSize: 12, color: '#888', fontVariantNumeric: 'tabular-nums' }}>{Math.round(opacity * 100)}%</span>
                   </div>
                   <input
