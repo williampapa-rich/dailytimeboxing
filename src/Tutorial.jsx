@@ -56,14 +56,16 @@ const ALL_STEPS = { ko: STEPS_KO, en: STEPS_EN, zh: STEPS_ZH, es: STEPS_ES, ja: 
 // Button positions: flex row right:20, gap:8, each 48px
 // [EditView 48] 8 [Settings 48] 8 [FAB 48] — FAB rightmost
 // FAB right edge = 20, Settings right edge = 76, EditView right edge = 132
+// FAB items: 3 items × 56px spacing + FAB btn = bottom 20 to top of last item
+// items at bottom: 56+0*56=76, 56+1*56=132, 56+2*56=188 (top of highest = 188+48=236 from bottom)
 const SPOTLIGHTS = [
-  null,                                       // 0: welcome
-  { bottom: 20, right: 132, w: 48, h: 48 },  // 1: edit btn
-  { bottom: 20, right: 132, w: 48, h: 48 },  // 2: view btn
-  { bottom: 20, right: 76, w: 48, h: 48 },   // 3: settings
-  { bottom: 20, left: 20, w: 48, h: 48 },    // 4: music
-  { bottom: 20, right: 20, w: 48, h: 240 },  // 5: FAB expanded (tall rect covering FAB + items)
-  null,                                       // 6: get started
+  null,                                              // 0: welcome
+  { bottom: 20, right: 132, w: 48, h: 48 },         // 1: edit btn
+  { bottom: 20, right: 132, w: 48, h: 48 },         // 2: view btn
+  { bottom: 20, right: 76, w: 48, h: 48 },          // 3: settings
+  { bottom: 20, left: 20, w: 48, h: 48 },           // 4: music
+  { bottom: 16, right: 16, w: 56, h: 224 },         // 5: FAB + 3 items (48+56*3)
+  null,                                              // 6: get started
 ];
 
 export default function Tutorial({ isOpen, onClose, C, mode, setMode, setFabOpen }) {
@@ -111,7 +113,7 @@ export default function Tutorial({ isOpen, onClose, C, mode, setMode, setFabOpen
           bottom: spot.bottom, ...(spot.left != null ? { left: spot.left } : {}), ...(spot.right != null ? { right: spot.right } : {}),
           width: spot.w || 48, height: spot.h || 48,
           borderRadius: (spot.h && spot.h > 60) ? 28 : 999,
-          boxShadow: `0 0 0 9999px rgba(0,0,0,0.6), 0 0 0 3px ${C.accent}`,
+          boxShadow: '0 0 0 9999px rgba(0,0,0,0.6)',
           pointerEvents: 'none',
           transition: 'all 0.3s ease',
         }} />

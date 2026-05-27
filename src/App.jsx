@@ -171,6 +171,8 @@ export default function App() {
   const { t } = useI18n();
 
   const viewElRef = useRef(null);
+  const dateInputRef = useRef(null);
+  const [shareModalOpen, setShareModalOpen] = useState(false);
   const viewObserverRef = useRef(null);
   const lastScrollRef = useRef(0);
   const progRef = useRef(0);
@@ -753,18 +755,19 @@ export default function App() {
 
       `}</style>
 
-      {/* Fullscreen button — top right */}
+      {/* Fullscreen button — top right, desktop only */}
       <button
         onClick={toggleFullscreen}
         title={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
         style={{
           position: 'fixed', top: 16, right: 16, zIndex: 51,
+          display: window.matchMedia?.('(max-width: 768px)')?.matches ? 'none' : 'flex',
           width: 36, height: 36, borderRadius: 10,
           border: `1px solid ${C.border}`, cursor: 'pointer',
           backgroundColor: C.card, color: C.textMid,
           backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
           boxShadow: '0 2px 12px rgba(0,0,0,0.1)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          alignItems: 'center', justifyContent: 'center',
           transition: 'all 0.3s ease',
         }}
       >
@@ -882,14 +885,8 @@ export default function App() {
           </button>
           {/* Speed dial items — upward */}
           {[
-            { icon: <Calendar size={18} />, isCalendar: true },
-            { icon: copied ? <Check size={18} color={C.accent} /> : <Share2 size={18} />, onClick: async () => {
-              try { await navigator.clipboard.writeText('https://timebox.im'); setCopied(true); setTimeout(() => setCopied(false), 2000); } catch (e) {}
-            }},
-            ...(/iPhone|iPad|iPod|Android/i.test(navigator.userAgent) ? [{ icon: <MessageCircle size={18} />, onClick: () => {
-              const msg = encodeURIComponent(t.shareMessage);
-              window.open(`sms:?body=${msg}`, '_blank'); setFabOpen(false);
-            }}] : []),
+            { icon: <Calendar size={18} />, onClick: () => { dateInputRef.current?.showPicker?.(); dateInputRef.current?.click?.(); setFabOpen(false); }},
+            { icon: <Share2 size={18} />, onClick: () => { setShareModalOpen(true); setFabOpen(false); }},
             { icon: <HelpCircle size={18} />, onClick: () => { setTutorialOpen(true); setFabOpen(false); }},
           ].map((item, i) => (
             <div key={i} style={{
@@ -898,36 +895,85 @@ export default function App() {
               pointerEvents: fabOpen ? 'auto' : 'none',
               transition: `all 0.25s cubic-bezier(0.4, 0, 0.2, 1) ${fabOpen ? i * 0.04 : 0}s`,
             }}>
-              {item.isCalendar ? (
-                <label style={{
-                  width: 48, height: 48, borderRadius: 999, cursor: 'pointer',
-                  border: `1px solid ${C.border}`,
-                  backgroundColor: C.card, color: C.text,
-                  backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
-                  boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  position: 'relative',
-                }}>
-                  {item.icon}
-                  <input type="date" value={toDateString(selectedDate)}
-                    onChange={(e) => { const parts = e.target.value.split('-'); if (parts.length === 3) { setSelectedDate(new Date(+parts[0], +parts[1] - 1, +parts[2])); setFabOpen(false); } }}
-                    style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer', width: '100%', height: '100%' }}
-                  />
-                </label>
-              ) : (
-                <button onClick={item.onClick} style={{
-                  width: 48, height: 48, borderRadius: 999,
-                  border: `1px solid ${C.border}`, cursor: 'pointer',
-                  backgroundColor: C.card, color: C.text,
-                  backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
-                  boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                }}>{item.icon}</button>
-              )}
+              <button onClick={item.onClick} style={{
+                width: 48, height: 48, borderRadius: 999,
+                border: `1px solid ${C.border}`, cursor: 'pointer',
+                backgroundColor: C.card, color: C.text,
+                backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
+                boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>{item.icon}</button>
             </div>
           ))}
         </div>
       </div>
+      {/* Hidden date input for calendar FAB */}
+      <input ref={dateInputRef} type="date" value={toDateString(selectedDate)}
+        onChange={(e) => { const parts = e.target.value.split('-'); if (parts.length === 3) setSelectedDate(new Date(+parts[0], +parts[1] - 1, +parts[2])); }}
+        style={{ position: 'fixed', top: '50%', left: '50%', opacity: 0, pointerEvents: 'none', width: 0, height: 0 }}
+      />
+
+      {/* Share modal */}
+      <div onClick={() => setShareModalOpen(false)} style={{
+        position: 'fixed', inset: 0, zIndex: 200,
+        background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        opacity: shareModalOpen ? 1 : 0, visibility: shareModalOpen ? 'visible' : 'hidden',
+        pointerEvents: shareModalOpen ? 'auto' : 'none', transition: 'all 0.25s ease',
+      }}>
+        <div onClick={(e) => e.stopPropagation()} style={{
+          width: 'min(340px, 85vw)', padding: '24px', borderRadius: 16,
+          backgroundColor: C.card, color: C.text, border: `1px solid ${C.border}`,
+          backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
+          boxShadow: '0 24px 80px rgba(0,0,0,0.5)',
+          transform: shareModalOpen ? 'scale(1)' : 'scale(0.95)',
+          transition: 'transform 0.25s ease',
+        }}>
+          <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 16, textAlign: 'center' }}>{t.share}</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {/* Kakao */}
+            <button onClick={() => alert(t.comingSoon)} style={{
+              display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', borderRadius: 10,
+              border: `1px solid ${C.border}`, backgroundColor: C.hover, color: C.text,
+              cursor: 'pointer', fontSize: 14, fontWeight: 500, transition: 'all 0.15s',
+            }}>
+              <span style={{ fontSize: 20 }}>💬</span>
+              KakaoTalk
+            </button>
+            {/* Copy link */}
+            <button onClick={async () => {
+              try { await navigator.clipboard.writeText('https://timebox.im'); setCopied(true); setTimeout(() => { setCopied(false); setShareModalOpen(false); }, 1500); } catch (e) {}
+            }} style={{
+              display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', borderRadius: 10,
+              border: `1px solid ${C.border}`, backgroundColor: copied ? C.accent : C.hover, color: copied ? '#fff' : C.text,
+              cursor: 'pointer', fontSize: 14, fontWeight: 500, transition: 'all 0.15s',
+            }}>
+              {copied ? <Check size={18} /> : <Link size={18} />}
+              {copied ? t.copied : t.copyLink}
+            </button>
+            {/* SMS — mobile only */}
+            {/iPhone|iPad|iPod|Android/i.test(navigator.userAgent) && (
+              <button onClick={() => {
+                const msg = encodeURIComponent(t.shareMessage);
+                window.open(`sms:?body=${msg}`, '_blank'); setShareModalOpen(false);
+              }} style={{
+                display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', borderRadius: 10,
+                border: `1px solid ${C.border}`, backgroundColor: C.hover, color: C.text,
+                cursor: 'pointer', fontSize: 14, fontWeight: 500,
+              }}>
+                <MessageCircle size={18} />
+                {t.sendSMS}
+              </button>
+            )}
+          </div>
+          <button onClick={() => setShareModalOpen(false)} style={{
+            width: '100%', marginTop: 12, padding: '10px', borderRadius: 8,
+            border: 'none', backgroundColor: 'transparent', color: C.textMid,
+            cursor: 'pointer', fontSize: 13,
+          }}>{t.cancel}</button>
+        </div>
+      </div>
+
       <SettingsPanel isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} themeId={themeId} onChangeTheme={changeTheme} opacity={opacity} onChangeOpacity={changeOpacity} C={C} />
       <Tutorial isOpen={tutorialOpen} onClose={() => setTutorialOpen(false)} C={C} mode={mode} setMode={setMode} setFabOpen={setFabOpen} />
     </div>
