@@ -21,7 +21,7 @@ const MENU = [
   { key: 'support', icon: HelpCircle, label: '지원' },
 ];
 
-export default function SettingsPanel({ isOpen, onClose, themeId, onChangeTheme }) {
+export default function SettingsPanel({ isOpen, onClose, themeId, onChangeTheme, opacity, onChangeOpacity }) {
   const [activeSection, setActiveSection] = useState('account');
   const [busy, setBusy] = useState(false);
   const innerRef = useRef(null);
@@ -293,6 +293,24 @@ export default function SettingsPanel({ isOpen, onClose, themeId, onChangeTheme 
                       </button>
                     );
                   })}
+                </div>
+
+                {/* Opacity slider */}
+                <div style={{ marginTop: 24 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                    <span style={{ fontSize: 13, fontWeight: 600, color: '#fff' }}>투명도</span>
+                    <span style={{ fontSize: 12, color: '#888', fontVariantNumeric: 'tabular-nums' }}>{Math.round(opacity * 100)}%</span>
+                  </div>
+                  <input
+                    type="range" min={10} max={100} step={5}
+                    value={Math.round(opacity * 100)}
+                    onChange={(e) => onChangeOpacity(parseInt(e.target.value, 10) / 100)}
+                    style={{ width: '100%', accentColor: '#D97757', cursor: 'pointer' }}
+                  />
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: '#666', marginTop: 4 }}>
+                    <span>투명</span>
+                    <span>불투명</span>
+                  </div>
                 </div>
               </div>
             )}

@@ -1,5 +1,5 @@
 import { useState, useEffect, useLayoutEffect, useRef, useCallback } from "react";
-import { Pencil, Eye, Trash2, Plus, Clock, Save, Check, X, ChevronLeft, ChevronRight, Calendar } from "lucide-react";
+import { Pencil, Eye, Trash2, Plus, Save, Check, X, ChevronLeft, ChevronRight, Calendar } from "lucide-react";
 import { Settings } from 'lucide-react';
 import SettingsPanel from "./SettingsPanel.jsx";
 import MusicPlayer from "./MusicPlayer.jsx";
@@ -176,6 +176,7 @@ const getTimerInfo = (boxes) => {
 export default function App() {
   const [mode, setMode] = useState('view');
   const [themeId, setThemeId] = useState(DEFAULT_THEME);
+  const [opacity, setOpacity] = useState(0.85);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState(() => new Date());
   const [boxes, setBoxes] = useState([]);
@@ -228,7 +229,19 @@ export default function App() {
   }, [measureView]);
 
   const currentTheme = THEMES[themeId] || THEMES[DEFAULT_THEME];
-  const C = currentTheme.colors;
+  const baseC = currentTheme.colors;
+  const C = { ...baseC };
+  // Apply user opacity to semi-transparent surfaces
+  const scaleAlpha = (rgba, factor) => {
+    const m = rgba.match(/rgba?\((\d+),\s*(\d+),\s*(\d+),?\s*([\d.]*)\)/);
+    if (!m) return rgba;
+    const a = m[4] ? parseFloat(m[4]) * factor : factor;
+    return `rgba(${m[1]},${m[2]},${m[3]},${Math.min(1, a).toFixed(2)})`;
+  };
+  C.bg = scaleAlpha(baseC.bg, opacity / 0.85);
+  C.card = scaleAlpha(baseC.card, opacity / 0.85);
+  C.cardAlt = scaleAlpha(baseC.cardAlt, opacity / 0.85);
+  C.inputBg = scaleAlpha(baseC.inputBg, opacity / 0.85);
   const theme = C.scheme;
   const sw = cw / VISIBLE_SLOTS;
   const tw = sw * SLOTS_PER_DAY;
@@ -246,6 +259,8 @@ export default function App() {
       try {
         const t = await window.storage.get('dtb-theme');
         if (t?.value && THEMES[t.value]) setThemeId(t.value);
+        const o = await window.storage.get('dtb-opacity');
+        if (o?.value) { const v = parseFloat(o.value); if (v >= 0.1 && v <= 1) setOpacity(v); }
       } catch (e) {}
       setLoading(false);
     })();
@@ -269,6 +284,11 @@ export default function App() {
     if (!THEMES[id]) return;
     setThemeId(id);
     try { await window.storage.set('dtb-theme', id); } catch (e) {}
+  };
+
+  const changeOpacity = async (val) => {
+    setOpacity(val);
+    try { await window.storage.set('dtb-opacity', String(val)); } catch (e) {}
   };
 
   useEffect(() => {
@@ -764,128 +784,74 @@ export default function App() {
         }
       `}</style>
 
-      {/* Header */}
-      <div style={{
-        borderBottom: `1px solid ${C.border}`,
-        backgroundColor: C.cardAlt,
-        position: 'sticky',
-        top: 0,
-        zIndex: 30
-      }}>
-        <div style={{ maxWidth: 860, margin: '0 auto', padding: '10px 16px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <div style={{
-                width: 32, height: 32, borderRadius: 8, backgroundColor: C.accent,
-                display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-              }}>
-                <Clock size={14} color="white" strokeWidth={2.5} />
-              </div>
-              <h1 style={{ fontSize: 14, fontWeight: 700, lineHeight: 1.2, margin: 0, color: C.text, whiteSpace: 'nowrap' }}>Daily Time Boxing</h1>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <div style={{ display: 'flex', gap: 3, backgroundColor: C.hover, borderRadius: 7, padding: 3 }}>
-                <button
-                  onClick={() => setMode('edit')}
-                  style={{
-                    padding: '5px 10px', borderRadius: 5, fontSize: 12, border: 'none', cursor: 'pointer',
-                    backgroundColor: mode === 'edit' ? C.card : 'transparent',
-                    color: mode === 'edit' ? C.text : C.textMid,
-                    fontWeight: mode === 'edit' ? 600 : 500,
-                    display: 'flex', alignItems: 'center', gap: 4,
-                    boxShadow: mode === 'edit' ? '0 1px 2px rgba(0,0,0,0.08)' : 'none',
-                    transition: 'all 0.15s'
-                  }}
-                >
-                  <Pencil size={11} />
-                  편집
-                </button>
-                <button
-                  onClick={() => { setMode('view'); closeEdit(); }}
-                  style={{
-                    padding: '5px 10px', borderRadius: 5, fontSize: 12, border: 'none', cursor: 'pointer',
-                    backgroundColor: mode === 'view' ? C.card : 'transparent',
-                    color: mode === 'view' ? C.text : C.textMid,
-                    fontWeight: mode === 'view' ? 600 : 500,
-                    display: 'flex', alignItems: 'center', gap: 4,
-                    boxShadow: mode === 'view' ? '0 1px 2px rgba(0,0,0,0.08)' : 'none',
-                    transition: 'all 0.15s'
-                  }}
-                >
-                  <Eye size={11} />
-                  뷰
-                </button>
-              </div>
-            </div>
+      <div style={{ flex: 1, minHeight: 0, maxWidth: 1032, margin: '0 auto', padding: '16px 24px', width: '100%', position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+        {/* Navigation bar inside content */}
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          gap: 8, marginBottom: 12, width: '100%', flexShrink: 0,
+        }}>
+          <div style={{ display: 'flex', gap: 3, backgroundColor: C.hover, borderRadius: 7, padding: 3 }}>
+            <button
+              onClick={() => setMode('edit')}
+              style={{
+                padding: '5px 10px', borderRadius: 5, fontSize: 12, border: 'none', cursor: 'pointer',
+                backgroundColor: mode === 'edit' ? C.card : 'transparent',
+                color: mode === 'edit' ? C.text : C.textMid,
+                fontWeight: mode === 'edit' ? 600 : 500,
+                display: 'flex', alignItems: 'center', gap: 4,
+                boxShadow: mode === 'edit' ? '0 1px 2px rgba(0,0,0,0.08)' : 'none',
+                transition: 'all 0.15s'
+              }}
+            >
+              <Pencil size={11} />
+              편집
+            </button>
+            <button
+              onClick={() => { setMode('view'); closeEdit(); }}
+              style={{
+                padding: '5px 10px', borderRadius: 5, fontSize: 12, border: 'none', cursor: 'pointer',
+                backgroundColor: mode === 'view' ? C.card : 'transparent',
+                color: mode === 'view' ? C.text : C.textMid,
+                fontWeight: mode === 'view' ? 600 : 500,
+                display: 'flex', alignItems: 'center', gap: 4,
+                boxShadow: mode === 'view' ? '0 1px 2px rgba(0,0,0,0.08)' : 'none',
+                transition: 'all 0.15s'
+              }}
+            >
+              <Eye size={11} />
+              뷰
+            </button>
           </div>
-          {/* Date navigation - separate row */}
-          <div style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            gap: 8, marginTop: 8, paddingTop: 8,
-            borderTop: `1px solid ${C.border}`,
-          }}>
+          <div style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', display: 'flex', alignItems: 'center', gap: 8 }}>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <button
               onClick={() => setSelectedDate(d => shiftDate(d, -1))}
-              style={{
-                background: C.hover, border: 'none', cursor: 'pointer',
-                padding: 6, borderRadius: 6,
-                color: C.text, display: 'flex', alignItems: 'center',
-              }}
+              style={{ background: C.hover, border: 'none', cursor: 'pointer', padding: 6, borderRadius: 6, color: C.text, display: 'flex', alignItems: 'center' }}
               title="이전 날짜"
-            >
-              <ChevronLeft size={16} />
-            </button>
+            ><ChevronLeft size={16} /></button>
             <label style={{ position: 'relative', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
               <Calendar size={13} color={C.textMid} />
-              <span style={{
-                fontSize: 13, color: isToday(selectedDate) ? C.text : C.accent,
-                fontWeight: 600,
-              }}>
+              <span style={{ fontSize: 13, color: isToday(selectedDate) ? C.text : C.accent, fontWeight: 600 }}>
                 {formatDate(selectedDate)}
               </span>
-              <input
-                type="date"
-                value={toDateString(selectedDate)}
-                onChange={(e) => {
-                  const parts = e.target.value.split('-');
-                  if (parts.length === 3) {
-                    setSelectedDate(new Date(+parts[0], +parts[1] - 1, +parts[2]));
-                  }
-                }}
-                style={{
-                  position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer',
-                  width: '100%', height: '100%',
-                }}
+              <input type="date" value={toDateString(selectedDate)}
+                onChange={(e) => { const parts = e.target.value.split('-'); if (parts.length === 3) setSelectedDate(new Date(+parts[0], +parts[1] - 1, +parts[2])); }}
+                style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer', width: '100%', height: '100%' }}
               />
             </label>
             <button
               onClick={() => setSelectedDate(d => shiftDate(d, 1))}
-              style={{
-                background: C.hover, border: 'none', cursor: 'pointer',
-                padding: 6, borderRadius: 6,
-                color: C.text, display: 'flex', alignItems: 'center',
-              }}
+              style={{ background: C.hover, border: 'none', cursor: 'pointer', padding: 6, borderRadius: 6, color: C.text, display: 'flex', alignItems: 'center' }}
               title="다음 날짜"
-            >
-              <ChevronRight size={16} />
-            </button>
+            ><ChevronRight size={16} /></button>
             {!isToday(selectedDate) && (
-              <button
-                onClick={() => setSelectedDate(new Date())}
-                style={{
-                  background: C.accent, border: 'none', cursor: 'pointer',
-                  color: '#fff', fontSize: 11, fontWeight: 700, padding: '4px 10px',
-                  borderRadius: 6,
-                }}
-              >
-                오늘
-              </button>
+              <button onClick={() => setSelectedDate(new Date())}
+                style={{ background: C.accent, border: 'none', cursor: 'pointer', color: '#fff', fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 6 }}
+              >오늘</button>
             )}
           </div>
         </div>
-      </div>
-
-      <div style={{ flex: 1, minHeight: 0, maxWidth: 860, margin: '0 auto', padding: '24px', width: '100%', position: 'relative', zIndex: 1 }}>
         {loading ? (
           <div style={{ textAlign: 'center', color: C.textMid, padding: '80px 0' }}>불러오는 중...</div>
         ) : mode === 'edit' ? (
@@ -950,7 +916,7 @@ export default function App() {
       >
         <Settings size={20} />
       </button>
-      <SettingsPanel isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} themeId={themeId} onChangeTheme={changeTheme} />
+      <SettingsPanel isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} themeId={themeId} onChangeTheme={changeTheme} opacity={opacity} onChangeOpacity={changeOpacity} />
     </div>
   );
 }
@@ -1526,7 +1492,7 @@ function ViewMode({ C, viewRef, boxes, sw, tw, onScroll, toggleTaskInBox, isView
 
           {/* Current time indicator - RED */}
           {isViewingToday && (
-          <div style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', top: 0, height: 90, zIndex: 20, pointerEvents: 'none' }}>
+          <div style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', top: 0, height: 108, zIndex: 20, pointerEvents: 'none' }}>
             <div style={{
               position: 'absolute', top: -24, left: '50%', transform: 'translateX(-50%)',
               backgroundColor: C.indicator, color: 'white', fontSize: 9, padding: '2px 8px',
@@ -1553,7 +1519,7 @@ function ViewMode({ C, viewRef, boxes, sw, tw, onScroll, toggleTaskInBox, isView
             className="dtb-no-scrollbar"
             style={{ overflowX: 'auto', overflowY: 'hidden', width: '100%' }}
           >
-            <div style={{ position: 'relative', width: tw, height: 120 }}>
+            <div style={{ position: 'relative', width: tw, height: 144 }}>
               {sw > 0 && (
               <>
               {Array.from({ length: SLOTS_PER_DAY }).map((_, i) => {
@@ -1563,7 +1529,7 @@ function ViewMode({ C, viewRef, boxes, sw, tw, onScroll, toggleTaskInBox, isView
                     key={`slot-${i}`}
                     style={{
                       position: 'absolute',
-                      left: i * sw, width: sw, top: 6, height: 70,
+                      left: i * sw, width: sw, top: 6, height: 84,
                       backgroundColor: C.slotBg,
                       borderLeft: isHour ? `1px solid ${C.border}` : `1px dashed ${C.border}80`
                     }}
@@ -1583,7 +1549,7 @@ function ViewMode({ C, viewRef, boxes, sw, tw, onScroll, toggleTaskInBox, isView
                     style={{
                       position: 'absolute',
                       left: left + 3, top: 6,
-                      width: w - 6, height: 70,
+                      width: w - 6, height: 84,
                       backgroundColor: box.color, color: txt,
                       borderRadius: 6, padding: 8,
                       boxShadow: '0 1px 2px rgba(0,0,0,0.12)',
@@ -1607,7 +1573,7 @@ function ViewMode({ C, viewRef, boxes, sw, tw, onScroll, toggleTaskInBox, isView
                 const isHour = i % 2 === 0;
                 return (
                   <div key={`tick-${i}`} style={{
-                    position: 'absolute', left: i * sw - 0.5, top: 82,
+                    position: 'absolute', left: i * sw - 0.5, top: 98,
                     width: 1, height: isHour ? 6 : 3,
                     backgroundColor: C.textMid, opacity: isHour ? 0.6 : 0.3
                   }} />
@@ -1616,7 +1582,7 @@ function ViewMode({ C, viewRef, boxes, sw, tw, onScroll, toggleTaskInBox, isView
 
               {Array.from({ length: 25 }).map((_, h) => (
                 <div key={`lab-${h}`} className="dtb-tnum" style={{
-                  position: 'absolute', left: h * 2 * sw, top: 94,
+                  position: 'absolute', left: h * 2 * sw, top: 112,
                   transform: 'translateX(-50%)', fontSize: 10,
                   color: C.text, fontWeight: 500, whiteSpace: 'nowrap'
                 }}>
