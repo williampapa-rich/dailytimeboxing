@@ -784,7 +784,7 @@ export default function App() {
         }
       `}</style>
 
-      <div style={{ flex: 1, minHeight: 0, maxWidth: 1032, margin: '0 auto', padding: '16px 24px', width: '100%', position: 'relative', zIndex: 1 }}>
+      <div style={{ flex: 1, minHeight: 0, maxWidth: 1032, margin: '0 auto', padding: '16px 24px', width: '100%', position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', justifyContent: mode === 'view' ? 'center' : 'stretch' }}>
         {/* Navigation bar inside content */}
         <div style={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
