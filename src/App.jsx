@@ -883,7 +883,7 @@ export default function App() {
           {/* Speed dial items — upward */}
           {[
             { icon: <Calendar size={18} />, isCalendar: true },
-            { icon: <Share2 size={18} />, onClick: async () => {
+            { icon: copied ? <Check size={18} color={C.accent} /> : <Share2 size={18} />, onClick: async () => {
               try { await navigator.clipboard.writeText('https://timebox.im'); setCopied(true); setTimeout(() => setCopied(false), 2000); } catch (e) {}
             }},
             ...(/iPhone|iPad|iPod|Android/i.test(navigator.userAgent) ? [{ icon: <MessageCircle size={18} />, onClick: () => {
@@ -929,7 +929,7 @@ export default function App() {
         </div>
       </div>
       <SettingsPanel isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} themeId={themeId} onChangeTheme={changeTheme} opacity={opacity} onChangeOpacity={changeOpacity} C={C} />
-      <Tutorial isOpen={tutorialOpen} onClose={() => setTutorialOpen(false)} C={C} mode={mode} setMode={setMode} />
+      <Tutorial isOpen={tutorialOpen} onClose={() => setTutorialOpen(false)} C={C} mode={mode} setMode={setMode} setFabOpen={setFabOpen} />
     </div>
   );
 }

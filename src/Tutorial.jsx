@@ -7,6 +7,7 @@ const STEPS_KO = [
   { emoji: '👀', title: '뷰 모드', desc: '편집 화면에서 우하단 👀 버튼을 누르면\n뷰 모드로 전환됩니다.\n현재 진행 중인 일정과 남은 시간을\n한눈에 확인할 수 있어요.' },
   { emoji: '⚙️', title: '설정', desc: '테마, 언어, 투명도를\n원하는 대로 커스터마이즈하세요.' },
   { emoji: '🎵', title: '음악', desc: 'Spotify와 YouTube로\n집중 음악을 들으며 작업하세요.\n(데스크톱 전용)' },
+  { emoji: '···', title: '더보기 메뉴', desc: '우하단 ··· 버튼을 누르면\n📅 날짜 선택/이동\n🔗 친구에게 공유하기\n❓ 이 튜토리얼 다시보기\n를 할 수 있어요!' },
   { emoji: '🚀', title: '시작하기', desc: '지금 바로 첫 타임박스를 만들어보세요!\nGoogle 로그인하면 여러 기기에서 동기화됩니다.' },
 ];
 
@@ -16,6 +17,7 @@ const STEPS_EN = [
   { emoji: '👀', title: 'View Mode', desc: 'In edit mode, tap 👀 at bottom-right\nto switch to view mode.\nSee your current schedule\nand remaining time at a glance.' },
   { emoji: '⚙️', title: 'Settings', desc: 'Customize themes, language,\nand opacity to your liking.' },
   { emoji: '🎵', title: 'Music', desc: 'Listen to focus music with\nSpotify and YouTube.\n(Desktop only)' },
+  { emoji: '···', title: 'More Menu', desc: 'Tap ··· at bottom-right to:\n📅 Pick a date\n🔗 Share with friends\n❓ Replay this tutorial' },
   { emoji: '🚀', title: 'Get Started', desc: 'Create your first timebox now!\nSign in with Google to sync across devices.' },
 ];
 
@@ -25,6 +27,7 @@ const STEPS_ZH = [
   { emoji: '👀', title: '查看模式', desc: '在编辑模式下，点击右下角 👀\n即可切换到查看模式。\n一目了然地查看当前日程\n和剩余时间。' },
   { emoji: '⚙️', title: '设置', desc: '自定义主题、语言\n和不透明度。' },
   { emoji: '🎵', title: '音乐', desc: '用Spotify和YouTube\n播放专注音乐。\n（仅限桌面端）' },
+  { emoji: '···', title: '更多菜单', desc: '点击右下角 ··· 可以：\n📅 选择日期\n🔗 分享给朋友\n❓ 重新查看本教程' },
   { emoji: '🚀', title: '开始', desc: '立即创建第一个时间盒！\n用Google登录可在多设备同步。' },
 ];
 
@@ -34,6 +37,7 @@ const STEPS_ES = [
   { emoji: '👀', title: 'Modo vista', desc: 'En modo edición, toca 👀 abajo a la derecha\npara cambiar al modo vista.\nVe tu horario actual\ny el tiempo restante de un vistazo.' },
   { emoji: '⚙️', title: 'Ajustes', desc: 'Personaliza temas, idioma\ny opacidad a tu gusto.' },
   { emoji: '🎵', title: 'Música', desc: 'Escucha música de concentración\ncon Spotify y YouTube.\n(Solo escritorio)' },
+  { emoji: '···', title: 'Menú más', desc: 'Toca ··· abajo a la derecha para:\n📅 Elegir fecha\n🔗 Compartir con amigos\n❓ Ver este tutorial de nuevo' },
   { emoji: '🚀', title: 'Empezar', desc: '¡Crea tu primer timebox ahora!\nInicia sesión con Google para sincronizar.' },
 ];
 
@@ -43,23 +47,26 @@ const STEPS_JA = [
   { emoji: '👀', title: 'ビューモード', desc: '編集モードで右下の 👀 をタップすると\nビューモードに切り替わります。\n現在のスケジュールと残り時間を\n一目で確認できます。' },
   { emoji: '⚙️', title: '設定', desc: 'テーマ、言語、不透明度を\nお好みにカスタマイズ。' },
   { emoji: '🎵', title: '音楽', desc: 'SpotifyとYouTubeで\n集中音楽を聴きながら作業。\n（デスクトップ専用）' },
+  { emoji: '···', title: 'もっとメニュー', desc: '右下の ··· をタップすると：\n📅 日付を選択\n🔗 友達にシェア\n❓ このチュートリアルを再表示' },
   { emoji: '🚀', title: '始めましょう', desc: '今すぐ最初のタイムボックスを作成！\nGoogleログインで複数デバイスと同期。' },
 ];
 
 const ALL_STEPS = { ko: STEPS_KO, en: STEPS_EN, zh: STEPS_ZH, es: STEPS_ES, ja: STEPS_JA };
 
 // Button positions: flex row right:20, gap:8, each 48px
-// [EditView] 8 [Settings] 8 [FAB] — FAB rightmost at right:20
+// [EditView 48] 8 [Settings 48] 8 [FAB 48] — FAB rightmost
+// FAB right edge = 20, Settings right edge = 76, EditView right edge = 132
 const SPOTLIGHTS = [
-  null,                                          // 0: welcome
-  { bottom: 20, right: 20 + 56 + 8 + 56 + 8 }, // 1: edit — leftmost button
-  { bottom: 20, right: 20 + 56 + 8 + 56 + 8 }, // 2: view — same button
-  { bottom: 20, right: 20 + 56 + 8 },           // 3: settings
-  { bottom: 20, left: 20 },                      // 4: music — left side
-  null,                                          // 5: get started
+  null,                                       // 0: welcome
+  { bottom: 20, right: 132, w: 48, h: 48 },  // 1: edit btn
+  { bottom: 20, right: 132, w: 48, h: 48 },  // 2: view btn
+  { bottom: 20, right: 76, w: 48, h: 48 },   // 3: settings
+  { bottom: 20, left: 20, w: 48, h: 48 },    // 4: music
+  { bottom: 20, right: 20, w: 48, h: 240 },  // 5: FAB expanded (tall rect covering FAB + items)
+  null,                                       // 6: get started
 ];
 
-export default function Tutorial({ isOpen, onClose, C, mode, setMode }) {
+export default function Tutorial({ isOpen, onClose, C, mode, setMode, setFabOpen }) {
   const { lang, t } = useI18n();
   const [step, setStep] = useState(0);
   const [origMode, setOrigMode] = useState(null);
@@ -70,24 +77,20 @@ export default function Tutorial({ isOpen, onClose, C, mode, setMode }) {
 
   useEffect(() => { if (isOpen) { setStep(0); setOrigMode(mode); } }, [isOpen]);
 
-  // Switch mode based on tutorial step
+  // Switch mode and FAB based on tutorial step
   useEffect(() => {
-    if (!isOpen || !setMode || origMode == null) return;
-    if (step === 1) {
-      // Edit mode card: show the opposite so user sees the edit button
-      // If originally in view → stay view (edit button visible)
-      // If originally in edit → switch to view (edit button visible)
-      setMode('view');
-    } else if (step === 2) {
-      // View mode card: show edit mode so user sees the view button
-      setMode('edit');
-    } else {
-      setMode(origMode);
+    if (!isOpen) return;
+    if (setMode && origMode != null) {
+      if (step === 1) setMode('view');
+      else if (step === 2) setMode('edit');
+      else setMode(origMode);
     }
+    if (setFabOpen) setFabOpen(step === 5);
   }, [step, isOpen]);
 
   const handleClose = () => {
     if (origMode != null && setMode) setMode(origMode);
+    if (setFabOpen) setFabOpen(false);
     onClose();
   };
 
@@ -106,8 +109,8 @@ export default function Tutorial({ isOpen, onClose, C, mode, setMode }) {
         <div style={{
           position: 'fixed', zIndex: 300,
           bottom: spot.bottom, ...(spot.left != null ? { left: spot.left } : {}), ...(spot.right != null ? { right: spot.right } : {}),
-          width: 48, height: 48,
-          borderRadius: 999,
+          width: spot.w || 48, height: spot.h || 48,
+          borderRadius: (spot.h && spot.h > 60) ? 28 : 999,
           boxShadow: `0 0 0 9999px rgba(0,0,0,0.6), 0 0 0 3px ${C.accent}`,
           pointerEvents: 'none',
           transition: 'all 0.3s ease',
