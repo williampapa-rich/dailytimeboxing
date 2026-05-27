@@ -74,10 +74,20 @@ async function userIdSync() {
   return cachedUserId;
 }
 
+function localGet(key) {
+  try { const v = localStorage.getItem('dtb:' + key); return v !== null ? { value: v } : null; } catch (e) { return null; }
+}
+function localSet(key, value) {
+  try { localStorage.setItem('dtb:' + key, typeof value === 'string' ? value : JSON.stringify(value)); } catch (e) {}
+}
+function localRemove(key) {
+  try { localStorage.removeItem('dtb:' + key); } catch (e) {}
+}
+
 export const cloudStorage = {
   async get(key) {
     const uid = await userIdSync();
-    if (!uid) return null;
+    if (!uid) return localGet(key);
     if (key.startsWith('timeboxes:')) {
       const date = key.slice('timeboxes:'.length);
       const { data, error } = await supabase
@@ -86,20 +96,30 @@ export const cloudStorage = {
         .eq('user_id', uid)
         .eq('date', date)
         .maybeSingle();
-      if (error || !data) return null;
-      return { value: JSON.stringify(data.data) };
+      if (error || !data) {
+        const local = localGet(key);
+        if (local) {
+          this.set(key, local.value).catch(() => {});
+        }
+        return local;
+      }
+      const val = JSON.stringify(data.data);
+      localSet(key, val);
+      return { value: val };
     }
     const { data, error } = await supabase
       .from('user_prefs')
       .select('data')
       .eq('user_id', uid)
       .maybeSingle();
-    if (error || !data) return null;
+    if (error || !data) return localGet(key);
     const v = data.data?.[key];
-    return v === undefined ? null : { value: v };
+    if (v !== undefined) localSet(key, v);
+    return v === undefined ? localGet(key) : { value: v };
   },
 
   async set(key, value) {
+    localSet(key, value);
     const uid = await userIdSync();
     if (!uid) { console.warn('[storage.set] no user'); return false; }
     if (key.startsWith('timeboxes:')) {
@@ -126,6 +146,7 @@ export const cloudStorage = {
   },
 
   async remove(key) {
+    localRemove(key);
     const uid = await userIdSync();
     if (!uid) return false;
     if (key.startsWith('timeboxes:')) {
