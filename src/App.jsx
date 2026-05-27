@@ -1,6 +1,6 @@
 import { useState, useEffect, useLayoutEffect, useRef, useCallback } from "react";
 import { Pencil, Eye, Trash2, Plus, Save, Check, X, ChevronLeft, ChevronRight, Calendar } from "lucide-react";
-import { Settings, Share2, Link, MessageCircle, Send, HelpCircle } from 'lucide-react';
+import { Settings, Share2, Link, MessageCircle, Send, HelpCircle, Maximize, Minimize } from 'lucide-react';
 import SettingsPanel from "./SettingsPanel.jsx";
 import { THEMES, DEFAULT_THEME } from './themes.js';
 import MusicPlayer from "./MusicPlayer.jsx";
@@ -133,6 +133,19 @@ export default function App() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  useEffect(() => {
+    const h = () => setIsFullscreen(!!document.fullscreenElement);
+    document.addEventListener('fullscreenchange', h);
+    return () => document.removeEventListener('fullscreenchange', h);
+  }, []);
+
+  const toggleFullscreen = () => {
+    if (document.fullscreenElement) document.exitFullscreen();
+    else document.documentElement.requestFullscreen().catch(() => {});
+  };
+
   const [tutorialOpen, setTutorialOpen] = useState(() => {
     try { return !localStorage.getItem('dtb-tutorial-done'); } catch (e) { return true; }
   });
@@ -739,6 +752,24 @@ export default function App() {
         .dtb-icon-btn:hover { background-color: ${C.borderStrong}; }
 
       `}</style>
+
+      {/* Fullscreen button — top right */}
+      <button
+        onClick={toggleFullscreen}
+        title={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
+        style={{
+          position: 'fixed', top: 16, right: 16, zIndex: 51,
+          width: 36, height: 36, borderRadius: 10,
+          border: `1px solid ${C.border}`, cursor: 'pointer',
+          backgroundColor: C.card, color: C.textMid,
+          backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
+          boxShadow: '0 2px 12px rgba(0,0,0,0.1)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          transition: 'all 0.3s ease',
+        }}
+      >
+        {isFullscreen ? <Minimize size={16} /> : <Maximize size={16} />}
+      </button>
 
       <div style={{ flex: 1, minHeight: 0, maxWidth: 1032, margin: '0 auto', padding: '16px 24px', width: '100%', position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', justifyContent: mode === 'view' ? 'center' : 'stretch', transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)' }}>
         {/* Navigation bar inside content */}

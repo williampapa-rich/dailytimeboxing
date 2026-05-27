@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useI18n } from './i18n.js';
 
 const STEPS_KO = [
@@ -55,6 +55,8 @@ export default function Tutorial({ isOpen, onClose, C }) {
   const current = steps[step];
   const isLast = step === steps.length - 1;
 
+  useEffect(() => { if (isOpen) setStep(0); }, [isOpen]);
+
   if (!isOpen) return null;
 
   return (
@@ -85,10 +87,10 @@ export default function Tutorial({ isOpen, onClose, C }) {
           {/* Progress dots */}
           <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginBottom: 20 }}>
             {steps.map((_, i) => (
-              <div key={i} style={{
+              <div key={i} onClick={() => setStep(i)} style={{
                 width: i === step ? 20 : 6, height: 6, borderRadius: 3,
                 backgroundColor: i === step ? C.accent : (C.hover),
-                transition: 'all 0.3s ease',
+                transition: 'all 0.3s ease', cursor: 'pointer',
               }} />
             ))}
           </div>
