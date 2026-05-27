@@ -48,44 +48,69 @@ const STEPS_JA = [
 
 const ALL_STEPS = { ko: STEPS_KO, en: STEPS_EN, zh: STEPS_ZH, es: STEPS_ES, ja: STEPS_JA };
 
+// Button positions: flex row right:20, gap:8, each 48px
+// [EditView] 8 [Settings] 8 [FAB] — FAB rightmost at right:20
 const SPOTLIGHTS = [
-  null,
-  { bottom: 20, right: 20 + 48 + 8 + 48 + 8, size: 56 },
-  { bottom: 20, right: 20 + 48 + 8 + 48 + 8, size: 56 },
-  { bottom: 20, right: 20 + 48 + 8, size: 56 },
-  { bottom: 20, left: 20, size: 56 },
-  null,
+  null,                                          // 0: welcome
+  { bottom: 20, right: 20 + 56 + 8 + 56 + 8 }, // 1: edit — leftmost button
+  { bottom: 20, right: 20 + 56 + 8 + 56 + 8 }, // 2: view — same button
+  { bottom: 20, right: 20 + 56 + 8 },           // 3: settings
+  { bottom: 20, left: 20 },                      // 4: music — left side
+  null,                                          // 5: get started
 ];
 
-export default function Tutorial({ isOpen, onClose, C }) {
+export default function Tutorial({ isOpen, onClose, C, mode, setMode }) {
   const { lang, t } = useI18n();
   const [step, setStep] = useState(0);
+  const [origMode, setOrigMode] = useState(null);
   const steps = ALL_STEPS[lang] || ALL_STEPS.en;
   const current = steps[step];
   const isLast = step === steps.length - 1;
   const spot = SPOTLIGHTS[step] || null;
 
-  useEffect(() => { if (isOpen) setStep(0); }, [isOpen]);
+  useEffect(() => { if (isOpen) { setStep(0); setOrigMode(mode); } }, [isOpen]);
+
+  // Switch mode based on tutorial step
+  useEffect(() => {
+    if (!isOpen || !setMode || origMode == null) return;
+    if (step === 1) {
+      // Edit mode card: show the opposite so user sees the edit button
+      // If originally in view → stay view (edit button visible)
+      // If originally in edit → switch to view (edit button visible)
+      setMode('view');
+    } else if (step === 2) {
+      // View mode card: show edit mode so user sees the view button
+      setMode('edit');
+    } else {
+      setMode(origMode);
+    }
+  }, [step, isOpen]);
+
+  const handleClose = () => {
+    if (origMode != null && setMode) setMode(origMode);
+    onClose();
+  };
 
   if (!isOpen) return null;
 
   return (
     <>
       {/* Overlay */}
-      <div onClick={onClose} style={{
+      <div onClick={handleClose} style={{
         position: 'fixed', inset: 0, zIndex: 300,
         background: spot ? 'transparent' : 'rgba(0,0,0,0.6)',
         backdropFilter: spot ? 'none' : 'blur(8px)', WebkitBackdropFilter: spot ? 'none' : 'blur(8px)',
       }} />
-      {/* Spotlight ring */}
+      {/* Spotlight cutout */}
       {spot && (
         <div style={{
           position: 'fixed', zIndex: 300,
-          bottom: spot.bottom - 6, ...(spot.left != null ? { left: spot.left - 6 } : {}), ...(spot.right != null ? { right: spot.right - 6 } : {}),
-          width: spot.size + 12, height: spot.size + 12,
+          bottom: spot.bottom, ...(spot.left != null ? { left: spot.left } : {}), ...(spot.right != null ? { right: spot.right } : {}),
+          width: 48, height: 48,
           borderRadius: 999,
-          boxShadow: `0 0 0 9999px rgba(0,0,0,0.6), 0 0 0 4px ${C.accent}88`,
+          boxShadow: `0 0 0 9999px rgba(0,0,0,0.6), 0 0 0 3px ${C.accent}`,
           pointerEvents: 'none',
+          transition: 'all 0.3s ease',
         }} />
       )}
       <div onClick={(e) => e.stopPropagation()} style={{
@@ -119,13 +144,13 @@ export default function Tutorial({ isOpen, onClose, C }) {
 
           {/* Buttons */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <button onClick={() => { onClose(); try { localStorage.setItem('dtb-tutorial-done', '1'); } catch(e){} }} style={{
+            <button onClick={() => { handleClose(); try { localStorage.setItem('dtb-tutorial-done', '1'); } catch(e){} }} style={{
               padding: '8px 16px', borderRadius: 8, border: 'none',
               backgroundColor: 'transparent', color: C.textMid, cursor: 'pointer',
               fontSize: 13, fontWeight: 500,
             }}>Skip</button>
             <button onClick={() => {
-              if (isLast) { onClose(); try { localStorage.setItem('dtb-tutorial-done', '1'); } catch(e){} }
+              if (isLast) { handleClose(); try { localStorage.setItem('dtb-tutorial-done', '1'); } catch(e){} }
               else setStep(s => s + 1);
             }} style={{
               padding: '10px 24px', borderRadius: 10, border: 'none',

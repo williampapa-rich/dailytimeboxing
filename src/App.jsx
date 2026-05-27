@@ -893,9 +893,8 @@ export default function App() {
             { icon: <HelpCircle size={18} />, onClick: () => { setTutorialOpen(true); setFabOpen(false); }},
           ].map((item, i) => (
             <div key={i} style={{
-              position: 'absolute', bottom: 56 + i * 56, right: 0,
+              position: 'absolute', bottom: 56 + i * 56, left: '50%', transform: fabOpen ? 'translateX(-50%) scale(1)' : 'translateX(-50%) translateY(10px) scale(0.8)',
               opacity: fabOpen ? 1 : 0,
-              transform: fabOpen ? 'translateY(0) scale(1)' : 'translateY(10px) scale(0.8)',
               pointerEvents: fabOpen ? 'auto' : 'none',
               transition: `all 0.25s cubic-bezier(0.4, 0, 0.2, 1) ${fabOpen ? i * 0.04 : 0}s`,
             }}>
@@ -930,7 +929,7 @@ export default function App() {
         </div>
       </div>
       <SettingsPanel isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} themeId={themeId} onChangeTheme={changeTheme} opacity={opacity} onChangeOpacity={changeOpacity} C={C} />
-      <Tutorial isOpen={tutorialOpen} onClose={() => setTutorialOpen(false)} C={C} />
+      <Tutorial isOpen={tutorialOpen} onClose={() => setTutorialOpen(false)} C={C} mode={mode} setMode={setMode} />
     </div>
   );
 }
