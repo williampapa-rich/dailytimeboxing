@@ -2,6 +2,7 @@ import { useState, useEffect, useLayoutEffect, useRef, useCallback } from "react
 import { Pencil, Eye, Trash2, Plus, Save, Check, X, ChevronLeft, ChevronRight, Calendar } from "lucide-react";
 import { Settings } from 'lucide-react';
 import SettingsPanel from "./SettingsPanel.jsx";
+import { THEMES, DEFAULT_THEME } from './themes.js';
 import MusicPlayer from "./MusicPlayer.jsx";
 
 const SLOTS_PER_DAY = 48;
@@ -13,60 +14,6 @@ const ROW_VERTICAL_MARGIN = 2;
 const MINUTES_PER_DAY = 1440;
 const MIN_PER_SLOT = 30;
 
-export const THEMES = {
-  'dark-abstract': {
-    id: 'dark-abstract',
-    name: 'Dark Abstract',
-    bgImage: './themes/dark-abstract.jpg',
-    colors: {
-      bg: 'rgba(10,10,10,0.75)',
-      card: 'rgba(30,28,25,0.85)',
-      cardAlt: 'rgba(22,20,18,0.85)',
-      border: 'rgba(58,54,50,0.6)',
-      borderStrong: '#524C44',
-      text: '#F5F4EE',
-      textMid: '#A8A59B',
-      textDim: '#6B6962',
-      hover: 'rgba(51,48,43,0.7)',
-      accent: '#D97757',
-      accentHover: '#E08866',
-      accentActive: '#EAA188',
-      indicator: '#F87171',
-      indicatorSoft: 'rgba(248,113,113,0.22)',
-      slotBg: 'rgba(58, 54, 50, 0.35)',
-      inputBg: 'rgba(22,20,18,0.85)',
-      inputBorder: '#524C44',
-      scheme: 'dark',
-    },
-  },
-  'light-desert': {
-    id: 'light-desert',
-    name: 'Light Desert',
-    bgImage: './themes/light-desert.jpg',
-    colors: {
-      bg: 'rgba(245,244,238,0.6)',
-      card: 'rgba(255,255,255,0.72)',
-      cardAlt: 'rgba(250,249,245,0.72)',
-      border: 'rgba(229,227,218,0.6)',
-      borderStrong: '#D6D3CA',
-      text: '#1F1E1D',
-      textMid: '#6B6962',
-      textDim: '#9C9A93',
-      hover: 'rgba(235,233,224,0.6)',
-      accent: '#D97757',
-      accentHover: '#C66848',
-      accentActive: '#B85936',
-      indicator: '#EF4444',
-      indicatorSoft: 'rgba(239,68,68,0.18)',
-      slotBg: 'rgba(235, 233, 224, 0.3)',
-      inputBg: 'rgba(255,255,255,0.72)',
-      inputBorder: '#D6D3CA',
-      scheme: 'light',
-    },
-  },
-};
-
-const DEFAULT_THEME = 'dark-abstract';
 
 const CLAUDE_COLORS = [
   '#D97757', '#C9A88C', '#A4B07F', '#7FA8A4',

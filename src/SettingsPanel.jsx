@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { X, Palette, Clock, BarChart3, User, HelpCircle, LogOut } from 'lucide-react';
 import { useAuthUser } from './auth.js';
 import { signInWithGoogle, signOut } from './supabase.js';
-import { THEMES } from './App.jsx';
+import { THEMES } from './themes.js';
 
 const GoogleIcon = ({ size = 16 }) => (
   <svg width={size} height={size} viewBox="0 0 48 48" aria-hidden="true">
