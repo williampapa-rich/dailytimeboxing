@@ -30,6 +30,7 @@ function isMobile() {
 }
 
 export default function MusicPlayer({ appColors }) {
+  const AC = appColors || {};
   const [isOpen, setIsOpen] = useState(false);
   const [mobileAlert, setMobileAlert] = useState(false);
   const [activeTab, setActiveTab] = useState('spotify');
@@ -388,8 +389,9 @@ export default function MusicPlayer({ appColors }) {
           position: 'fixed', bottom: 78, right: 76, zIndex: 52,
           width: 380, maxHeight: 'calc(100vh - 100px)',
           display: 'flex', flexDirection: 'column',
-          backgroundColor: '#1a1a2e', color: '#fff',
-          borderRadius: 16, border: '1px solid rgba(255,255,255,0.08)',
+          backgroundColor: AC.card || '#1a1a2e', color: AC.text || '#fff',
+          borderRadius: 16, border: `1px solid ${AC.border || 'rgba(255,255,255,0.08)'}`,
+          backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
           boxShadow: '0 24px 64px rgba(0,0,0,0.5)',
           opacity: isOpen ? 1 : 0,
           visibility: isOpen ? 'visible' : 'hidden',
@@ -414,18 +416,18 @@ export default function MusicPlayer({ appColors }) {
           </div>
           <div style={{ display: 'flex', gap: 2 }}>
             {connected.spotify && activeTab === 'spotify' && (
-              <button onClick={() => setSearchOpen(v => !v)} title="곡 검색" style={iconBtn(searchOpen ? '#1DB954' : '#999')}>
+              <button onClick={() => setSearchOpen(v => !v)} title="곡 검색" style={iconBtn(searchOpen ? '#1DB954' : (AC.textMid || '#999'))}>
                 <Search size={13} />
               </button>
             )}
             {connected[activeTab] && (
-              <button onClick={() => onDisconnect(activeTab)} title="연결 해제" style={iconBtn('#999')}>
+              <button onClick={() => onDisconnect(activeTab)} title="연결 해제" style={iconBtn(AC.textMid || '#999')}>
                 <X size={13} />
               </button>
             )}
             {/* Playlist dropdown */}
             {connected[activeTab] && playlists.length > 0 && (
-              <button onClick={() => setPlaylistDropdownOpen(v => !v)} title="플레이리스트" style={iconBtn('#999')}>
+              <button onClick={() => setPlaylistDropdownOpen(v => !v)} title="플레이리스트" style={iconBtn(AC.textMid || '#999')}>
                 <ChevronDown size={14} />
               </button>
             )}
@@ -558,7 +560,7 @@ export default function MusicPlayer({ appColors }) {
               {/* Controls */}
               {!(activeTab === 'spotify' && premiumRequired) && (
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 20 }}>
-                  <button onClick={skipPrev} style={ctrlBtn('#ccc')} title="이전곡"><SkipBack size={18} /></button>
+                  <button onClick={skipPrev} style={ctrlBtn(AC.text || '#ccc')} title="이전곡"><SkipBack size={18} /></button>
                   <button onClick={togglePlay} title={playing ? '일시정지' : '재생'}
                     style={{
                       width: 48, height: 48, borderRadius: '50%', border: '2px solid rgba(255,255,255,0.2)',
@@ -568,7 +570,7 @@ export default function MusicPlayer({ appColors }) {
                   >
                     {playing ? <Pause size={22} fill="#fff" /> : <Play size={22} fill="#fff" style={{ marginLeft: 2 }} />}
                   </button>
-                  <button onClick={skipNext} style={ctrlBtn('#ccc')} title="다음곡"><SkipForward size={18} /></button>
+                  <button onClick={skipNext} style={ctrlBtn(AC.text || '#ccc')} title="다음곡"><SkipForward size={18} /></button>
                 </div>
               )}
             </div>
@@ -658,7 +660,7 @@ export default function MusicPlayer({ appColors }) {
           onClick={(e) => e.stopPropagation()}
           style={{
             width: 'min(320px, 85vw)', padding: '28px 24px', borderRadius: 16,
-            backgroundColor: '#1a1a2e', color: '#fff', textAlign: 'center',
+            backgroundColor: AC.card || '#1a1a2e', color: AC.text || '#fff', textAlign: 'center',
             boxShadow: '0 20px 60px rgba(0,0,0,0.4)',
             transform: mobileAlert ? 'scale(1)' : 'scale(0.9)',
             transition: 'transform 0.25s ease',
@@ -666,14 +668,14 @@ export default function MusicPlayer({ appColors }) {
         >
           <div style={{ fontSize: 32, marginBottom: 12 }}>🎵</div>
           <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 8 }}>데스크톱 전용 기능</div>
-          <div style={{ fontSize: 13, color: '#999', lineHeight: 1.6, marginBottom: 20 }}>
+          <div style={{ fontSize: 13, color: AC.textMid || '#999', lineHeight: 1.6, marginBottom: 20 }}>
             음악 플레이어는 데스크톱 브라우저에서만<br/>사용할 수 있어요.
           </div>
           <button
             onClick={() => setMobileAlert(false)}
             style={{
               padding: '10px 24px', borderRadius: 10, border: 'none',
-              backgroundColor: '#D97757', color: '#fff', fontSize: 14,
+              backgroundColor: AC.accent || '#D97757', color: '#fff', fontSize: 14,
               fontWeight: 600, cursor: 'pointer',
             }}
           >
