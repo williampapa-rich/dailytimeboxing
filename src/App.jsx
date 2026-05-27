@@ -571,7 +571,7 @@ export default function App() {
   };
 
   return (
-    <div className="dtb-root" onClick={() => shareOpen && setShareOpen(false)} style={{ height: '100vh', display: 'flex', flexDirection: 'column', overflow: mode === 'edit' ? 'hidden' : 'auto', backgroundColor: C.bg, color: C.text, colorScheme: C.scheme, position: 'relative', opacity: loading ? 0 : 1, transition: 'opacity 0.4s ease' }}>
+    <div className="dtb-root" onClick={() => shareOpen && setShareOpen(false)} style={{ height: '100dvh', display: 'flex', flexDirection: 'column', overflow: mode === 'edit' ? 'hidden' : 'auto', backgroundColor: C.bg, color: C.text, colorScheme: C.scheme, position: 'relative', opacity: loading ? 0 : 1, transition: 'opacity 0.4s ease' }}>
       {/* Background image */}
       <div style={{
         position: 'fixed', inset: 0, zIndex: 0,
@@ -727,14 +727,6 @@ export default function App() {
         }
         .dtb-icon-btn:hover { background-color: ${C.borderStrong}; }
 
-        @media (min-width: 1024px) {
-          .dtb-form-panel {
-            position: sticky;
-            top: 80px;
-            max-height: calc(100vh - 100px);
-            overflow-y: auto;
-          }
-        }
       `}</style>
 
       <div style={{ flex: 1, minHeight: 0, maxWidth: 1032, margin: '0 auto', padding: '16px 24px', width: '100%', position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', justifyContent: mode === 'view' ? 'center' : 'stretch', transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)' }}>
