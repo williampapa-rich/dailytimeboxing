@@ -335,7 +335,14 @@ export default function SettingsPanel({ isOpen, onClose, themeId, onChangeTheme,
             {activeSection === 'support' && (
               <div>
                 <h2 style={{ fontSize: 18, fontWeight: 700, margin: '0 0 20px', color: '#fff' }}>지원</h2>
-                <p style={{ color: '#888', fontSize: 13 }}>문의사항은 이메일로 보내주세요.</p>
+                <div style={{ padding: 20, backgroundColor: '#1f1f1f', borderRadius: 10, lineHeight: 1.7 }}>
+                  <div style={{ fontSize: 13, color: '#ccc', marginBottom: 12 }}>
+                    문의사항이나 버그 신고는 아래 이메일로 연락주시면 감사하겠습니다.
+                  </div>
+                  <a href="mailto:canbe0to1@gmail.com" style={{ fontSize: 14, fontWeight: 600, color: '#D97757', textDecoration: 'none' }}>
+                    canbe0to1@gmail.com
+                  </a>
+                </div>
               </div>
             )}
           </section>
