@@ -606,6 +606,10 @@ export default function App() {
         pointerEvents: 'none',
       }} />
       <style>{`
+        :fullscreen { background: transparent; }
+        ::backdrop { background: transparent; }
+        ::-webkit-full-screen-backdrop { background: transparent; }
+        html:fullscreen, html:-webkit-full-screen { background: transparent; }
         .dtb-root, .dtb-root * {
           font-family: 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, system-ui, Roboto, 'Helvetica Neue', 'Segoe UI', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif;
           box-sizing: border-box;

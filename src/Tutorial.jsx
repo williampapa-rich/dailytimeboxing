@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useI18n } from './i18n.js';
 
 const STEPS_KO = [
-  { emoji: '👋', title: '환영합니다!', desc: 'Daily Time Boxing으로\n하루를 타임박스로 계획하세요.' },
+  { emoji: '👋', title: '환영합니다!', desc: 'TimeBox으로\n하루를 타임박스로 계획하세요.' },
   { emoji: '✏️', title: '편집 모드', desc: '뷰 화면에서 우하단 ✏️ 버튼을 누르면\n편집 모드로 전환됩니다.\n타임라인에서 드래그하여 시간 블록을 만들고\n제목, 색상, 세부 Task를 지정하세요.' },
   { emoji: '👀', title: '뷰 모드', desc: '편집 화면에서 우하단 👀 버튼을 누르면\n뷰 모드로 전환됩니다.\n현재 진행 중인 일정과 남은 시간을\n한눈에 확인할 수 있어요.' },
   { emoji: '⚙️', title: '설정', desc: '테마, 언어, 투명도를\n원하는 대로 커스터마이즈하세요.' },
@@ -12,7 +12,7 @@ const STEPS_KO = [
 ];
 
 const STEPS_EN = [
-  { emoji: '👋', title: 'Welcome!', desc: 'Plan your day with\nDaily Time Boxing.' },
+  { emoji: '👋', title: 'Welcome!', desc: 'Plan your day with\nTimeBox.' },
   { emoji: '✏️', title: 'Edit Mode', desc: 'In view mode, tap ✏️ at bottom-right\nto switch to edit mode.\nDrag on the timeline to create time blocks.\nSet title, color, and subtasks.' },
   { emoji: '👀', title: 'View Mode', desc: 'In edit mode, tap 👀 at bottom-right\nto switch to view mode.\nSee your current schedule\nand remaining time at a glance.' },
   { emoji: '⚙️', title: 'Settings', desc: 'Customize themes, language,\nand opacity to your liking.' },
@@ -22,7 +22,7 @@ const STEPS_EN = [
 ];
 
 const STEPS_ZH = [
-  { emoji: '👋', title: '欢迎！', desc: '用Daily Time Boxing\n规划你的一天。' },
+  { emoji: '👋', title: '欢迎！', desc: '用TimeBox\n规划你的一天。' },
   { emoji: '✏️', title: '编辑模式', desc: '在查看模式下，点击右下角 ✏️\n即可切换到编辑模式。\n在时间线上拖动创建时间块\n设置标题、颜色和子任务。' },
   { emoji: '👀', title: '查看模式', desc: '在编辑模式下，点击右下角 👀\n即可切换到查看模式。\n一目了然地查看当前日程\n和剩余时间。' },
   { emoji: '⚙️', title: '设置', desc: '自定义主题、语言\n和不透明度。' },
@@ -32,7 +32,7 @@ const STEPS_ZH = [
 ];
 
 const STEPS_ES = [
-  { emoji: '👋', title: '¡Bienvenido!', desc: 'Planifica tu día con\nDaily Time Boxing.' },
+  { emoji: '👋', title: '¡Bienvenido!', desc: 'Planifica tu día con\nTimeBox.' },
   { emoji: '✏️', title: 'Modo edición', desc: 'En modo vista, toca ✏️ abajo a la derecha\npara cambiar al modo edición.\nArrastra en la línea de tiempo para crear bloques.\nDefine título, color y subtareas.' },
   { emoji: '👀', title: 'Modo vista', desc: 'En modo edición, toca 👀 abajo a la derecha\npara cambiar al modo vista.\nVe tu horario actual\ny el tiempo restante de un vistazo.' },
   { emoji: '⚙️', title: 'Ajustes', desc: 'Personaliza temas, idioma\ny opacidad a tu gusto.' },
@@ -42,7 +42,7 @@ const STEPS_ES = [
 ];
 
 const STEPS_JA = [
-  { emoji: '👋', title: 'ようこそ！', desc: 'Daily Time Boxingで\n一日を計画しましょう。' },
+  { emoji: '👋', title: 'ようこそ！', desc: 'TimeBoxで\n一日を計画しましょう。' },
   { emoji: '✏️', title: '編集モード', desc: 'ビューモードで右下の ✏️ をタップすると\n編集モードに切り替わります。\nタイムラインでドラッグして時間ブロックを作成。\nタイトル、色、サブタスクを設定。' },
   { emoji: '👀', title: 'ビューモード', desc: '編集モードで右下の 👀 をタップすると\nビューモードに切り替わります。\n現在のスケジュールと残り時間を\n一目で確認できます。' },
   { emoji: '⚙️', title: '設定', desc: 'テーマ、言語、不透明度を\nお好みにカスタマイズ。' },
