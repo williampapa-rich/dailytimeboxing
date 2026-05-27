@@ -171,7 +171,7 @@ export default function App() {
   const { t } = useI18n();
 
   const viewElRef = useRef(null);
-  const dateInputRef = useRef(null);
+  const [calendarOpen, setCalendarOpen] = useState(false);
   const [shareModalOpen, setShareModalOpen] = useState(false);
   const viewObserverRef = useRef(null);
   const lastScrollRef = useRef(0);
@@ -885,7 +885,7 @@ export default function App() {
           </button>
           {/* Speed dial items — upward */}
           {[
-            { icon: <Calendar size={18} />, onClick: () => { dateInputRef.current?.showPicker?.(); dateInputRef.current?.click?.(); setFabOpen(false); }},
+            { icon: <Calendar size={18} />, onClick: () => { setCalendarOpen(true); setFabOpen(false); }},
             { icon: <Share2 size={18} />, onClick: () => { setShareModalOpen(true); setFabOpen(false); }},
             { icon: <HelpCircle size={18} />, onClick: () => { setTutorialOpen(true); setFabOpen(false); }},
           ].map((item, i) => (
@@ -907,11 +907,8 @@ export default function App() {
           ))}
         </div>
       </div>
-      {/* Hidden date input for calendar FAB */}
-      <input ref={dateInputRef} type="date" value={toDateString(selectedDate)}
-        onChange={(e) => { const parts = e.target.value.split('-'); if (parts.length === 3) setSelectedDate(new Date(+parts[0], +parts[1] - 1, +parts[2])); }}
-        style={{ position: 'fixed', top: '50%', left: '50%', opacity: 0, pointerEvents: 'none', width: 0, height: 0 }}
-      />
+      {/* Calendar popup */}
+      {calendarOpen && <CalendarPopup C={C} t={t} selectedDate={selectedDate} onSelect={(d) => { setSelectedDate(d); setCalendarOpen(false); }} onClose={() => setCalendarOpen(false)} />}
 
       {/* Share modal */}
       <div onClick={() => setShareModalOpen(false)} style={{
@@ -1691,5 +1688,72 @@ function ViewMode({ t, C, viewRef, boxes, sw, tw, onScroll, toggleTaskInBox, isV
         </div>
       </div>
     </div>
+  );
+}
+
+function CalendarPopup({ C, t, selectedDate, onSelect, onClose }) {
+  const [viewDate, setViewDate] = useState(() => new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1));
+  const year = viewDate.getFullYear();
+  const month = viewDate.getMonth();
+  const firstDay = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const today = new Date();
+  const days = t.days || ['일','월','화','수','목','금','토'];
+
+  const cells = [];
+  for (let i = 0; i < firstDay; i++) cells.push(null);
+  for (let d = 1; d <= daysInMonth; d++) cells.push(d);
+
+  const isSelected = (d) => d && selectedDate.getFullYear() === year && selectedDate.getMonth() === month && selectedDate.getDate() === d;
+  const isToday = (d) => d && today.getFullYear() === year && today.getMonth() === month && today.getDate() === d;
+
+  return (
+    <>
+      <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 200 }} />
+      <div onClick={(e) => e.stopPropagation()} style={{
+        position: 'fixed', bottom: 80, right: 80, zIndex: 201,
+        width: 280, padding: 16, borderRadius: 14,
+        backgroundColor: C.card, color: C.text, border: `1px solid ${C.border}`,
+        backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
+        boxShadow: '0 16px 48px rgba(0,0,0,0.3)',
+        animation: 'dtb-fade-in 0.2s ease',
+      }}>
+        {/* Header */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+          <button onClick={() => setViewDate(new Date(year, month - 1, 1))} style={{ border: 'none', background: 'none', color: C.text, cursor: 'pointer', padding: 4 }}>
+            <ChevronLeft size={16} />
+          </button>
+          <span style={{ fontSize: 14, fontWeight: 700 }}>{year}. {month + 1}</span>
+          <button onClick={() => setViewDate(new Date(year, month + 1, 1))} style={{ border: 'none', background: 'none', color: C.text, cursor: 'pointer', padding: 4 }}>
+            <ChevronRight size={16} />
+          </button>
+        </div>
+        {/* Day headers */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 2, textAlign: 'center', marginBottom: 4 }}>
+          {days.map((d, i) => <div key={i} style={{ fontSize: 10, color: C.textDim, fontWeight: 600, padding: 4 }}>{d}</div>)}
+        </div>
+        {/* Days */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 2, textAlign: 'center' }}>
+          {cells.map((d, i) => (
+            <button key={i} disabled={!d} onClick={() => d && onSelect(new Date(year, month, d))}
+              style={{
+                width: 32, height: 32, borderRadius: 999, border: 'none', cursor: d ? 'pointer' : 'default',
+                backgroundColor: isSelected(d) ? C.accent : 'transparent',
+                color: isSelected(d) ? '#fff' : isToday(d) ? C.accent : d ? C.text : 'transparent',
+                fontWeight: isToday(d) || isSelected(d) ? 700 : 400,
+                fontSize: 12, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                margin: '0 auto', transition: 'all 0.15s',
+              }}
+            >{d || ''}</button>
+          ))}
+        </div>
+        {/* Today button */}
+        <button onClick={() => onSelect(new Date())} style={{
+          width: '100%', marginTop: 8, padding: '6px', borderRadius: 8,
+          border: `1px solid ${C.border}`, backgroundColor: 'transparent', color: C.accent,
+          cursor: 'pointer', fontSize: 12, fontWeight: 600,
+        }}>{t.today}</button>
+      </div>
+    </>
   );
 }
