@@ -85,7 +85,10 @@ async function handleOAuthCallbacks() {
     await handleOAuthCallbacks();
     await ensureSession();
     root.render(<App />);
-    window.scrollTo(0, 0);
+    requestAnimationFrame(() => {
+      window.scrollTo(0, 0);
+      document.querySelector('.dtb-root')?.scrollTo(0, 0);
+    });
   } catch (err) {
     console.error(err);
     root.render(<Loading msg={`연결 실패: ${err.message || err}`} />);
