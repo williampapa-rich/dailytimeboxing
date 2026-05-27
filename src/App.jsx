@@ -735,30 +735,30 @@ export default function App() {
         }
       `}</style>
 
-      <div style={{ flex: 1, minHeight: 0, maxWidth: 1032, margin: '0 auto', padding: '16px 24px', width: '100%', position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', justifyContent: mode === 'view' ? 'center' : 'stretch', transition: 'all 0.3s ease' }}>
+      <div style={{ flex: 1, minHeight: 0, maxWidth: 1032, margin: '0 auto', padding: '16px 24px', width: '100%', position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', justifyContent: mode === 'view' ? 'center' : 'stretch', transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)' }}>
         {/* Navigation bar inside content */}
         <div style={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           marginBottom: 12, flexShrink: 0,
         }}>
           <div style={{
-            display: 'flex', gap: 2, padding: 3, borderRadius: 10,
-            background: 'rgba(255,255,255,0.12)',
-            backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
-            border: '1px solid rgba(255,255,255,0.15)',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+            display: 'flex', gap: 2, padding: 3, borderRadius: 12,
+            background: 'linear-gradient(135deg, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.08) 100%)',
+            backdropFilter: 'blur(20px) saturate(1.4)', WebkitBackdropFilter: 'blur(20px) saturate(1.4)',
+            border: '1px solid rgba(255,255,255,0.25)',
+            boxShadow: '0 4px 16px rgba(0,0,0,0.1), inset 0 1px 0 rgba(255,255,255,0.2)',
           }}>
             <button
               onClick={() => setMode('edit')}
               style={{
-                padding: '6px 14px', borderRadius: 8, fontSize: 12, border: 'none', cursor: 'pointer',
-                backgroundColor: mode === 'edit' ? 'rgba(255,255,255,0.22)' : 'transparent',
+                padding: '6px 14px', borderRadius: 9, fontSize: 12, border: 'none', cursor: 'pointer',
+                backgroundColor: mode === 'edit' ? 'rgba(255,255,255,0.28)' : 'transparent',
                 color: mode === 'edit' ? C.text : C.textMid,
                 fontWeight: mode === 'edit' ? 600 : 500,
                 display: 'flex', alignItems: 'center', gap: 4,
-                backdropFilter: mode === 'edit' ? 'blur(8px)' : 'none',
-                boxShadow: mode === 'edit' ? '0 1px 4px rgba(0,0,0,0.1)' : 'none',
-                transition: 'all 0.25s ease'
+                backdropFilter: mode === 'edit' ? 'blur(12px)' : 'none',
+                boxShadow: mode === 'edit' ? '0 2px 8px rgba(0,0,0,0.12), inset 0 1px 0 rgba(255,255,255,0.3)' : 'none',
+                transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)'
               }}
             >
               <Pencil size={11} />
@@ -767,14 +767,14 @@ export default function App() {
             <button
               onClick={() => { setMode('view'); closeEdit(); }}
               style={{
-                padding: '6px 14px', borderRadius: 8, fontSize: 12, border: 'none', cursor: 'pointer',
-                backgroundColor: mode === 'view' ? 'rgba(255,255,255,0.22)' : 'transparent',
+                padding: '6px 14px', borderRadius: 9, fontSize: 12, border: 'none', cursor: 'pointer',
+                backgroundColor: mode === 'view' ? 'rgba(255,255,255,0.28)' : 'transparent',
                 color: mode === 'view' ? C.text : C.textMid,
                 fontWeight: mode === 'view' ? 600 : 500,
                 display: 'flex', alignItems: 'center', gap: 4,
-                backdropFilter: mode === 'view' ? 'blur(8px)' : 'none',
-                boxShadow: mode === 'view' ? '0 1px 4px rgba(0,0,0,0.1)' : 'none',
-                transition: 'all 0.25s ease'
+                backdropFilter: mode === 'view' ? 'blur(12px)' : 'none',
+                boxShadow: mode === 'view' ? '0 2px 8px rgba(0,0,0,0.12), inset 0 1px 0 rgba(255,255,255,0.3)' : 'none',
+                transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)'
               }}
             >
               <Eye size={11} />
@@ -919,7 +919,7 @@ function EditView({
   })();
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', animation: 'dtb-fade-in 0.3s ease' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', animation: 'dtb-fade-in 0.5s cubic-bezier(0.4, 0, 0.2, 1)' }}>
       {/* Timeline */}
       <div style={{ flex: 1, minHeight: 0, backgroundColor: C.card, borderRadius: '12px 12px 0 0', border: `1px solid ${C.border}`, borderBottom: 'none', padding: 12, userSelect: 'none' }}>
         <div ref={scrollRef} style={{ height: '100%', overflowY: 'auto', paddingRight: 4 }}>
@@ -1308,7 +1308,7 @@ function ViewMode({ C, viewRef, boxes, sw, tw, onScroll, toggleTaskInBox, isView
   const urgentColor = C.indicator;
 
   return (
-    <div style={{ backgroundColor: C.card, borderRadius: 12, border: `1px solid ${C.border}`, overflow: 'hidden', animation: 'dtb-fade-in 0.3s ease' }}>
+    <div style={{ backgroundColor: C.card, borderRadius: 12, border: `1px solid ${C.border}`, overflow: 'hidden', animation: 'dtb-fade-in 0.5s cubic-bezier(0.4, 0, 0.2, 1)' }}>
       <style>{`
         @keyframes dtb-urgent-pulse {
           0%, 100% { opacity: 1; }
