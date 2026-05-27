@@ -1,10 +1,11 @@
 import { useState, useEffect, useLayoutEffect, useRef, useCallback } from "react";
 import { Pencil, Eye, Trash2, Plus, Save, Check, X, ChevronLeft, ChevronRight, Calendar } from "lucide-react";
-import { Settings, Share2, Link, MessageCircle, Send } from 'lucide-react';
+import { Settings, Share2, Link, MessageCircle, Send, HelpCircle } from 'lucide-react';
 import SettingsPanel from "./SettingsPanel.jsx";
 import { THEMES, DEFAULT_THEME } from './themes.js';
 import MusicPlayer from "./MusicPlayer.jsx";
 import { useI18n } from './i18n.js';
+import Tutorial from './Tutorial.jsx';
 
 const SLOTS_PER_DAY = 48;
 const VISIBLE_SLOTS = 4;
@@ -132,6 +133,9 @@ export default function App() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [tutorialOpen, setTutorialOpen] = useState(() => {
+    try { return !localStorage.getItem('dtb-tutorial-done'); } catch (e) { return true; }
+  });
   const [selectedDate, setSelectedDate] = useState(() => new Date());
   const [boxes, setBoxes] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -861,6 +865,24 @@ export default function App() {
         )}
       </div>
       <MusicPlayer appColors={C} />
+      {/* Help button — above share */}
+      <button
+        onClick={() => setTutorialOpen(true)}
+        title="?"
+        style={{
+          position: 'fixed', bottom: 132, right: 20, zIndex: 51,
+          width: 48, height: 48, borderRadius: 999,
+          border: `1px solid ${C.border}`, cursor: 'pointer',
+          backgroundColor: C.card, color: C.text,
+          backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
+          boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
+        }}
+      >
+        <HelpCircle size={20} />
+      </button>
+
       {/* Share button — above settings */}
       <div onClick={(e) => e.stopPropagation()} style={{ position: 'fixed', bottom: 76, right: 20, zIndex: 51 }}>
         <button
@@ -939,6 +961,7 @@ export default function App() {
         <Settings size={20} />
       </button>
       <SettingsPanel isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} themeId={themeId} onChangeTheme={changeTheme} opacity={opacity} onChangeOpacity={changeOpacity} C={C} />
+      <Tutorial isOpen={tutorialOpen} onClose={() => setTutorialOpen(false)} C={C} />
     </div>
   );
 }
@@ -984,7 +1007,7 @@ function EditView({
   })();
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', animation: 'dtb-fade-in 0.5s cubic-bezier(0.4, 0, 0.2, 1)' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden', animation: 'dtb-fade-in 0.5s cubic-bezier(0.4, 0, 0.2, 1)' }}>
       {/* Timeline */}
       <div style={{ flex: 1, minHeight: 0, backgroundColor: C.card, borderRadius: '12px 12px 0 0', border: `1px solid ${C.border}`, borderBottom: 'none', padding: 12, userSelect: 'none' }}>
         <div ref={scrollRef} style={{ height: '100%', overflowY: 'auto', paddingRight: 4 }}>
@@ -1150,7 +1173,7 @@ function EditView({
           flexShrink: 0,
           backgroundColor: C.card, borderRadius: '0 0 12px 12px', border: `1px solid ${C.border}`,
           borderTop: `1px solid ${C.border}`,
-          padding: '16px 20px', maxHeight: '45vh', overflowY: 'auto',
+          padding: '16px 20px', maxHeight: '40vh', overflowY: 'auto',
         }}
       >
         {sel ? (
