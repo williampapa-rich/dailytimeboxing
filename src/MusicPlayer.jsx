@@ -25,8 +25,13 @@ function fmtDuration(ms) {
   return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
 }
 
+function isMobile() {
+  return typeof window !== 'undefined' && window.matchMedia('(max-width: 768px)').matches;
+}
+
 export default function MusicPlayer({ appColors }) {
   const [isOpen, setIsOpen] = useState(false);
+  const [mobileAlert, setMobileAlert] = useState(false);
   const [activeTab, setActiveTab] = useState('spotify');
   const [connected, setConnected] = useState({ spotify: false, youtube: false });
   const [busy, setBusy] = useState(false);
@@ -324,7 +329,7 @@ export default function MusicPlayer({ appColors }) {
     <>
       {/* Trigger button */}
       <button
-        onClick={() => setIsOpen(v => !v)}
+        onClick={() => isMobile() ? setMobileAlert(true) : setIsOpen(v => !v)}
         title="음악 플레이어"
         style={{
           position: 'fixed', bottom: 20, right: 76, zIndex: 51,
@@ -633,6 +638,48 @@ export default function MusicPlayer({ appColors }) {
       {/* YouTube iframe — always mounted */}
       <div style={{ position: 'fixed', width: 1, height: 1, opacity: 0, pointerEvents: 'none', overflow: 'hidden', left: -9999, top: -9999 }}>
         <div id="dtb-youtube-iframe" />
+      </div>
+
+      {/* Mobile alert modal */}
+      <div
+        onClick={() => setMobileAlert(false)}
+        style={{
+          position: 'fixed', inset: 0, zIndex: 200,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          background: 'rgba(0,0,0,0.5)',
+          backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)',
+          opacity: mobileAlert ? 1 : 0,
+          visibility: mobileAlert ? 'visible' : 'hidden',
+          pointerEvents: mobileAlert ? 'auto' : 'none',
+          transition: 'all 0.25s ease',
+        }}
+      >
+        <div
+          onClick={(e) => e.stopPropagation()}
+          style={{
+            width: 'min(320px, 85vw)', padding: '28px 24px', borderRadius: 16,
+            backgroundColor: '#1a1a2e', color: '#fff', textAlign: 'center',
+            boxShadow: '0 20px 60px rgba(0,0,0,0.4)',
+            transform: mobileAlert ? 'scale(1)' : 'scale(0.9)',
+            transition: 'transform 0.25s ease',
+          }}
+        >
+          <div style={{ fontSize: 32, marginBottom: 12 }}>🎵</div>
+          <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 8 }}>데스크톱 전용 기능</div>
+          <div style={{ fontSize: 13, color: '#999', lineHeight: 1.6, marginBottom: 20 }}>
+            음악 플레이어는 데스크톱 브라우저에서만<br/>사용할 수 있어요.
+          </div>
+          <button
+            onClick={() => setMobileAlert(false)}
+            style={{
+              padding: '10px 24px', borderRadius: 10, border: 'none',
+              backgroundColor: '#D97757', color: '#fff', fontSize: 14,
+              fontWeight: 600, cursor: 'pointer',
+            }}
+          >
+            확인
+          </button>
+        </div>
       </div>
     </>
   );
