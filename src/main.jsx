@@ -2,6 +2,7 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import './index.css';
 import App from './App.jsx';
+import { I18nProvider } from './i18n.js';
 import { supabase, ensureSession, cloudStorage } from './supabase.js';
 import * as spotify from './providers/spotify.js';
 import * as youtube from './providers/youtube.js';
@@ -22,7 +23,7 @@ function Loading({ msg }) {
   );
 }
 
-root.render(<Loading msg="연결 중..." />);
+root.render(<Loading msg="" />);
 
 async function handleOAuthCallbacks() {
   const params = new URLSearchParams(window.location.search);
@@ -84,7 +85,7 @@ async function handleOAuthCallbacks() {
   try {
     await handleOAuthCallbacks();
     await ensureSession();
-    root.render(<App />);
+    root.render(<I18nProvider><App /></I18nProvider>);
     requestAnimationFrame(() => {
       window.scrollTo(0, 0);
       document.querySelector('.dtb-root')?.scrollTo(0, 0);

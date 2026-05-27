@@ -3,6 +3,7 @@ import { Play, Pause, SkipBack, SkipForward, ChevronDown, X, Search, Music } fro
 import { getConnection, removeConnection } from './providers/tokens.js';
 import * as spotify from './providers/spotify.js';
 import * as youtube from './providers/youtube.js';
+import { useI18n } from './i18n.js';
 
 const SpotifyIcon = ({ size = 18, color = '#1DB954' }) => (
   <svg width={size} height={size} viewBox="0 0 168 168" aria-hidden="true">
@@ -31,6 +32,7 @@ function isMobile() {
 
 export default function MusicPlayer({ appColors }) {
   const AC = appColors || {};
+  const { t } = useI18n();
   const [isOpen, setIsOpen] = useState(false);
   const [mobileAlert, setMobileAlert] = useState(false);
   const [activeTab, setActiveTab] = useState('spotify');
@@ -157,7 +159,7 @@ export default function MusicPlayer({ appColors }) {
   };
 
   const onDisconnect = async (provider) => {
-    if (!confirm(`${provider} 연결을 해제할까요?`)) return;
+    if (!confirm(`${provider} ${t.confirmDisconnect}`)) return;
     await removeConnection(provider);
     setConnected(c => ({ ...c, [provider]: false }));
     setPlaylists([]); setSelectedPlaylist(null); setPlaylistTracks([]); setTrack(null); setPlaying(false); setPremiumRequired(false);
@@ -331,7 +333,7 @@ export default function MusicPlayer({ appColors }) {
       {/* Trigger button */}
       <button
         onClick={() => isMobile() ? setMobileAlert(true) : setIsOpen(v => !v)}
-        title="음악 플레이어"
+        title={t.musicPlayer}
         style={{
           position: 'fixed', bottom: 20, right: 76, zIndex: 51,
           height: 48, minWidth: 48,
@@ -416,18 +418,18 @@ export default function MusicPlayer({ appColors }) {
           </div>
           <div style={{ display: 'flex', gap: 2 }}>
             {connected.spotify && activeTab === 'spotify' && (
-              <button onClick={() => setSearchOpen(v => !v)} title="곡 검색" style={iconBtn(searchOpen ? '#1DB954' : (AC.textMid || '#999'))}>
+              <button onClick={() => setSearchOpen(v => !v)} title={t.searchTracks} style={iconBtn(searchOpen ? '#1DB954' : (AC.textMid || '#999'))}>
                 <Search size={13} />
               </button>
             )}
             {connected[activeTab] && (
-              <button onClick={() => onDisconnect(activeTab)} title="연결 해제" style={iconBtn(AC.textMid || '#999')}>
+              <button onClick={() => onDisconnect(activeTab)} title={t.disconnect} style={iconBtn(AC.textMid || '#999')}>
                 <X size={13} />
               </button>
             )}
             {/* Playlist dropdown */}
             {connected[activeTab] && playlists.length > 0 && (
-              <button onClick={() => setPlaylistDropdownOpen(v => !v)} title="플레이리스트" style={iconBtn(AC.textMid || '#999')}>
+              <button onClick={() => setPlaylistDropdownOpen(v => !v)} title={t.playlist} style={iconBtn(AC.textMid || '#999')}>
                 <ChevronDown size={14} />
               </button>
             )}
@@ -462,7 +464,7 @@ export default function MusicPlayer({ appColors }) {
         {!connected[activeTab] ? (
           <div style={{ padding: '32px 16px', textAlign: 'center', flexShrink: 0 }}>
             <div style={{ fontSize: 12, color: '#888', marginBottom: 14, whiteSpace: 'pre-line' }}>
-              {activeTab === 'spotify' ? 'Spotify 계정을 연결하면\n내 플레이리스트를 재생할 수 있어요' : 'YouTube 계정을 연결하면\n내 플레이리스트를 재생할 수 있어요'}
+              {activeTab === 'spotify' ? t.spotifyConnect : t.youtubeConnect}
             </div>
             <button onClick={() => onConnect(activeTab)} style={{
               display: 'inline-flex', alignItems: 'center', gap: 8, padding: '10px 18px', borderRadius: 999,
@@ -471,7 +473,7 @@ export default function MusicPlayer({ appColors }) {
               border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: 13,
             }}>
               {activeTab === 'spotify' ? <SpotifyIcon size={16} color="#000" /> : <YoutubeIcon size={16} />}
-              <span>{activeTab === 'spotify' ? 'Spotify' : 'YouTube'} 연결</span>
+              <span>{activeTab === 'spotify' ? 'Spotify' : 'YouTube'} {t.connectProvider}</span>
             </button>
           </div>
         ) : (
@@ -481,13 +483,13 @@ export default function MusicPlayer({ appColors }) {
               <div style={{ padding: '10px 14px', borderBottom: '1px solid rgba(255,255,255,0.06)', flexShrink: 0 }}>
                 <div style={{ position: 'relative', marginBottom: searchResults.length > 0 || searching ? 8 : 0 }}>
                   <Search size={12} color="#666" style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)' }} />
-                  <input autoFocus type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="곡 검색..."
+                  <input autoFocus type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder={t.searchPlaceholder}
                     style={{ width: '100%', boxSizing: 'border-box', padding: '8px 10px 8px 28px', borderRadius: 6, backgroundColor: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)', color: '#fff', fontSize: 12, outline: 'none' }}
                   />
                 </div>
                 {(searching || searchResults.length > 0) && (
                   <div style={{ maxHeight: 200, overflowY: 'auto' }}>
-                    {searching ? <div style={{ padding: 10, fontSize: 11, color: '#666', textAlign: 'center' }}>검색 중...</div>
+                    {searching ? <div style={{ padding: 10, fontSize: 11, color: '#666', textAlign: 'center' }}>{t.searching}</div>
                     : searchResults.map(tr => (
                       <button key={tr.id} onClick={() => onPickSearchResult(tr)} style={{
                         width: '100%', display: 'flex', alignItems: 'center', gap: 8, padding: '6px 4px',
@@ -522,7 +524,7 @@ export default function MusicPlayer({ appColors }) {
                 )}
                 <div style={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                   <div style={{ fontSize: 15, fontWeight: 700, lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {plName || track?.name || '재생할 곡 없음'}
+                    {plName || track?.name || t.noTrack}
                   </div>
                   {plName && track?.name && (
                     <div style={{ fontSize: 12, color: '#aaa', marginTop: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -533,7 +535,7 @@ export default function MusicPlayer({ appColors }) {
                     <div style={{ fontSize: 12, color: '#aaa', marginTop: 4 }}>{track.artist}</div>
                   )}
                   {activeTab === 'spotify' && premiumRequired && (
-                    <div style={{ fontSize: 10, color: '#888', marginTop: 6 }}>Premium 전용 · 플레이리스트 탭하면 앱에서 열림</div>
+                    <div style={{ fontSize: 10, color: '#888', marginTop: 6 }}>{t.spotifyPremium}</div>
                   )}
                 </div>
               </div>
@@ -560,8 +562,8 @@ export default function MusicPlayer({ appColors }) {
               {/* Controls */}
               {!(activeTab === 'spotify' && premiumRequired) && (
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 20 }}>
-                  <button onClick={skipPrev} style={ctrlBtn(AC.text || '#ccc')} title="이전곡"><SkipBack size={18} /></button>
-                  <button onClick={togglePlay} title={playing ? '일시정지' : '재생'}
+                  <button onClick={skipPrev} style={ctrlBtn(AC.text || '#ccc')} title={t.prevTrack}><SkipBack size={18} /></button>
+                  <button onClick={togglePlay} title={playing ? t.pause : t.play}
                     style={{
                       width: 48, height: 48, borderRadius: '50%', border: '2px solid rgba(255,255,255,0.2)',
                       backgroundColor: 'transparent', color: '#fff', cursor: 'pointer',
@@ -570,7 +572,7 @@ export default function MusicPlayer({ appColors }) {
                   >
                     {playing ? <Pause size={22} fill="#fff" /> : <Play size={22} fill="#fff" style={{ marginLeft: 2 }} />}
                   </button>
-                  <button onClick={skipNext} style={ctrlBtn(AC.text || '#ccc')} title="다음곡"><SkipForward size={18} /></button>
+                  <button onClick={skipNext} style={ctrlBtn(AC.text || '#ccc')} title={t.nextTrack}><SkipForward size={18} /></button>
                 </div>
               )}
             </div>
@@ -611,7 +613,7 @@ export default function MusicPlayer({ appColors }) {
             {/* YouTube unplayable / notices */}
             {activeTab === 'youtube' && ytUnplayable && (
               <div style={{ padding: '10px 16px', fontSize: 11, color: '#888', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
-                이 플레이리스트는 임베드 재생이 제한돼 있어요.
+                {t.ytEmbed}
               </div>
             )}
 
@@ -625,12 +627,12 @@ export default function MusicPlayer({ appColors }) {
             {/* Prompt to select playlist */}
             {!selectedPlaylist && !busy && playlists.length > 0 && (
               <div style={{ padding: '20px 16px', textAlign: 'center', color: '#666', fontSize: 12 }}>
-                상단에서 플레이리스트를 선택하세요
+                {t.selectPlaylist}
               </div>
             )}
             {busy && (
               <div style={{ padding: '20px 16px', textAlign: 'center', color: '#666', fontSize: 12 }}>
-                불러오는 중...
+                {t.loading}
               </div>
             )}
           </>
@@ -667,9 +669,9 @@ export default function MusicPlayer({ appColors }) {
           }}
         >
           <div style={{ fontSize: 32, marginBottom: 12 }}>🎵</div>
-          <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 8 }}>데스크톱 전용 기능</div>
-          <div style={{ fontSize: 13, color: AC.textMid || '#999', lineHeight: 1.6, marginBottom: 20 }}>
-            음악 플레이어는 데스크톱 브라우저에서만<br/>사용할 수 있어요.
+          <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 8 }}>{t.desktopOnly}</div>
+          <div style={{ fontSize: 13, color: AC.textMid || '#999', lineHeight: 1.6, marginBottom: 20, whiteSpace: 'pre-line' }}>
+            {t.desktopOnlyMsg}
           </div>
           <button
             onClick={() => setMobileAlert(false)}
@@ -679,7 +681,7 @@ export default function MusicPlayer({ appColors }) {
               fontWeight: 600, cursor: 'pointer',
             }}
           >
-            확인
+            {t.confirm}
           </button>
         </div>
       </div>

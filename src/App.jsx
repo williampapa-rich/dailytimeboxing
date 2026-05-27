@@ -4,6 +4,7 @@ import { Settings, Share2, Link, MessageCircle, Send } from 'lucide-react';
 import SettingsPanel from "./SettingsPanel.jsx";
 import { THEMES, DEFAULT_THEME } from './themes.js';
 import MusicPlayer from "./MusicPlayer.jsx";
+import { useI18n } from './i18n.js';
 
 const SLOTS_PER_DAY = 48;
 const VISIBLE_SLOTS = 4;
@@ -46,7 +47,11 @@ const getDateKey = (d = new Date()) => {
   return `timeboxes:${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`;
 };
 
-const formatDate = (d = new Date()) => {
+const formatDate = (d = new Date(), t = null) => {
+  if (t) {
+    const dayName = t.days[d.getDay()];
+    return t.dateFormat(d.getFullYear(), d.getMonth()+1, d.getDate(), dayName);
+  }
   const w = ['일','월','화','수','목','금','토'];
   return `${d.getFullYear()}년 ${d.getMonth()+1}월 ${d.getDate()}일 (${w[d.getDay()]})`;
 };
@@ -145,6 +150,8 @@ export default function App() {
   const [fEnd, setFEnd] = useState('');
   const [fTasks, setFTasks] = useState([{ id: newId('t'), text: '', done: false }]);
   const [error, setError] = useState('');
+
+  const { t } = useI18n();
 
   const viewElRef = useRef(null);
   const viewObserverRef = useRef(null);
@@ -254,11 +261,11 @@ export default function App() {
     if (alertedRef.current[key]) return;
     alertedRef.current[key] = true;
     const title = info.type === 'current'
-      ? `⏰ "${info.box.title}" 종료 5분 전`
-      : `⏰ "${info.box.title}" 시작 5분 전`;
+      ? `⏰ "${info.box.title}" ${t.notifEnding}`
+      : `⏰ "${info.box.title}" ${t.notifStarting}`;
     const body = info.type === 'current'
-      ? `${minToTime(info.box.end)}에 종료됩니다`
-      : `${minToTime(info.box.start)}에 시작됩니다`;
+      ? `${minToTime(info.box.end)}${t.notifEndAt}`
+      : `${minToTime(info.box.start)}${t.notifStartAt}`;
     try {
       if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
         new Notification(title, { body });
@@ -386,7 +393,7 @@ export default function App() {
         const start = minSlot * MIN_PER_SLOT;
         const end = (maxSlot + 1) * MIN_PER_SLOT;
         if (overlaps(start, end)) {
-          setError('이미 다른 타임박스가 있는 시간대입니다');
+          setError(t.timeConflict);
           setTimeout(() => setError(''), 2500);
         } else {
           openEdit({ start, end });
@@ -401,7 +408,7 @@ export default function App() {
           const start = ms * MIN_PER_SLOT;
           const end = (Ms + 1) * MIN_PER_SLOT;
           if (overlaps(start, end)) {
-            setError('이미 다른 타임박스가 있는 시간대입니다');
+            setError(t.timeConflict);
             setTimeout(() => setError(''), 2500);
             setPendingClick(null);
           } else {
@@ -423,19 +430,19 @@ export default function App() {
   }, []);
 
   const doSave = () => {
-    if (!fTitle.trim()) { setError('제목을 입력해주세요'); return; }
+    if (!fTitle.trim()) { setError(t.titleRequired); return; }
     const start = timeToMin(fStart);
     const end = timeToMin(fEnd);
     if (start === null || end === null) {
-      setError('올바른 시간 형식이 아닙니다 (HH:MM)');
+      setError(t.invalidTimeFormat);
       return;
     }
     if (end <= start) {
-      setError('종료 시간이 시작 시간보다 늦어야 합니다');
+      setError(t.endAfterStart);
       return;
     }
     if (overlaps(start, end, editing?.id)) {
-      setError('이미 다른 타임박스가 있는 시간대입니다');
+      setError(t.timeConflict);
       return;
     }
     const validTasks = fTasks
@@ -756,7 +763,7 @@ export default function App() {
               }}
             >
               <Pencil size={11} />
-              편집
+              {t.edit}
             </button>
             <button
               onClick={() => { setMode('view'); closeEdit(); }}
@@ -772,19 +779,19 @@ export default function App() {
               }}
             >
               <Eye size={11} />
-              뷰
+              {t.view}
             </button>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <button
               onClick={() => setSelectedDate(d => shiftDate(d, -1))}
               style={{ background: C.hover, border: 'none', cursor: 'pointer', padding: 6, borderRadius: 6, color: C.text, display: 'flex', alignItems: 'center' }}
-              title="이전 날짜"
+              title={t.prevDate}
             ><ChevronLeft size={16} /></button>
             <label style={{ position: 'relative', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
               <Calendar size={13} color={C.textMid} />
               <span style={{ fontSize: 13, color: isToday(selectedDate) ? C.text : C.accent, fontWeight: 600 }}>
-                {formatDate(selectedDate)}
+                {formatDate(selectedDate, t)}
               </span>
               <input type="date" value={toDateString(selectedDate)}
                 onChange={(e) => { const parts = e.target.value.split('-'); if (parts.length === 3) setSelectedDate(new Date(+parts[0], +parts[1] - 1, +parts[2])); }}
@@ -794,19 +801,20 @@ export default function App() {
             <button
               onClick={() => setSelectedDate(d => shiftDate(d, 1))}
               style={{ background: C.hover, border: 'none', cursor: 'pointer', padding: 6, borderRadius: 6, color: C.text, display: 'flex', alignItems: 'center' }}
-              title="다음 날짜"
+              title={t.nextDate}
             ><ChevronRight size={16} /></button>
             {!isToday(selectedDate) && (
               <button onClick={() => setSelectedDate(new Date())}
                 style={{ background: C.accent, border: 'none', cursor: 'pointer', color: '#fff', fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 6 }}
-              >오늘</button>
+              >{t.today}</button>
             )}
           </div>
         </div>
         {loading ? (
-          <div style={{ textAlign: 'center', color: C.textMid, padding: '80px 0' }}>불러오는 중...</div>
+          <div style={{ textAlign: 'center', color: C.textMid, padding: '80px 0' }}>{t.loading}</div>
         ) : mode === 'edit' ? (
           <EditView
+            t={t}
             C={C}
             boxes={boxes}
             isViewingToday={isToday(selectedDate)}
@@ -839,6 +847,7 @@ export default function App() {
           />
         ) : (
           <ViewMode
+            t={t}
             C={C}
             viewRef={viewRef}
             boxes={boxes}
@@ -856,7 +865,7 @@ export default function App() {
       <div onClick={(e) => e.stopPropagation()} style={{ position: 'fixed', bottom: 76, right: 20, zIndex: 51 }}>
         <button
           onClick={() => setShareOpen(v => !v)}
-          title="공유하기"
+          title={t.share}
           style={{
             width: 48, height: 48, borderRadius: 999,
             border: `1px solid ${C.border}`, cursor: 'pointer',
@@ -882,13 +891,13 @@ export default function App() {
           transformOrigin: 'bottom right',
           transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
         }}>
-          <div style={{ fontSize: 11, fontWeight: 600, color: C.textMid, padding: '4px 8px 8px', letterSpacing: '0.05em' }}>공유하기</div>
+          <div style={{ fontSize: 11, fontWeight: 600, color: C.textMid, padding: '4px 8px 8px', letterSpacing: '0.05em' }}>{t.share}</div>
           {[
-            { label: copied ? '복사 완료!' : '링크 복사', icon: <Link size={14} />, onClick: async () => {
+            { label: copied ? t.copied : t.copyLink, icon: <Link size={14} />, onClick: async () => {
               try { await navigator.clipboard.writeText('https://timebox.im'); setCopied(true); setTimeout(() => setCopied(false), 2000); } catch (e) {}
             }},
-            { label: 'SMS 보내기', icon: <MessageCircle size={14} />, onClick: () => {
-              const msg = encodeURIComponent('Daily Time Boxing으로 하루를 계획해보세요!\nhttps://timebox.im');
+            { label: t.sendSMS, icon: <MessageCircle size={14} />, onClick: () => {
+              const msg = encodeURIComponent(t.shareMessage);
               window.open(/iPhone|iPad|iPod|Android/i.test(navigator.userAgent) ? `sms:?body=${msg}` : `sms:?body=${msg}`, '_blank');
               setShareOpen(false);
             }},
@@ -915,7 +924,7 @@ export default function App() {
       {/* Settings button — fixed, right of music button */}
       <button
         onClick={() => setSettingsOpen(true)}
-        title="설정"
+        title={t.settings}
         style={{
           position: 'fixed', bottom: 20, right: 20, zIndex: 51,
           width: 48, height: 48, borderRadius: 999,
@@ -935,7 +944,7 @@ export default function App() {
 }
 
 function EditView({
-  C, boxes, isViewingToday, displayRange, rangeConflicts, onSlotDown, onSlotEnter, onSlotLeave, onBoxMouseDown, boxDrag,
+  t, C, boxes, isViewingToday, displayRange, rangeConflicts, onSlotDown, onSlotEnter, onSlotLeave, onBoxMouseDown, boxDrag,
   sel, editing, fTitle, setFTitle, fDesc, setFDesc, fColor, setFColor,
   fStart, setFStart, fEnd, setFEnd,
   fTasks, addTask, addTaskAfter, updateTaskText, toggleTask, removeTask,
@@ -1032,7 +1041,7 @@ function EditView({
                   position: 'absolute', top: 6, left: 10, fontSize: 10, fontWeight: 700,
                   color: rangeConflicts ? C.indicator : C.accent
                 }}>
-                  {rangeConflicts ? '⚠ 기존 박스와 겹침' : `${formatRange(displayRange.start, displayRange.end)} · ${displayRange.end - displayRange.start}분`}
+                  {rangeConflicts ? t.conflictWarning : `${formatRange(displayRange.start, displayRange.end)} · ${displayRange.end - displayRange.start}${t.minuteUnit}`}
                 </div>
               </div>
             )}
@@ -1146,7 +1155,7 @@ function EditView({
       >
         {sel ? (
           <>
-            <label style={{ display: 'block', fontSize: 11, color: C.textMid, marginBottom: 6, fontWeight: 600 }}>시간 범위</label>
+            <label style={{ display: 'block', fontSize: 11, color: C.textMid, marginBottom: 6, fontWeight: 600 }}>{t.timeRange}</label>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, minWidth: 0 }}>
               <input
                 type="text"
@@ -1171,34 +1180,34 @@ function EditView({
               />
             </div>
             <div className="dtb-tnum" style={{ fontSize: 11, color: C.textMid, marginBottom: 18 }}>
-              {validDuration !== null ? `${validDuration}분` : '시간을 입력하세요'}
+              {validDuration !== null ? `${validDuration}${t.minuteUnit}` : t.enterTime}
             </div>
 
-            <label style={{ display: 'block', fontSize: 11, color: C.textMid, marginBottom: 6, fontWeight: 600 }}>제목</label>
+            <label style={{ display: 'block', fontSize: 11, color: C.textMid, marginBottom: 6, fontWeight: 600 }}>{t.title}</label>
             <input
               value={fTitle}
               onChange={(e) => setFTitle(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter') onSave(); }}
-              placeholder="예: 운동, 회의, 학습..."
+              placeholder={t.titlePlaceholder}
               autoFocus
               className="dtb-input"
               style={{ marginBottom: 16 }}
             />
 
-            <label style={{ display: 'block', fontSize: 11, color: C.textMid, marginBottom: 6, fontWeight: 600 }}>설명 (선택)</label>
+            <label style={{ display: 'block', fontSize: 11, color: C.textMid, marginBottom: 6, fontWeight: 600 }}>{t.descLabel}</label>
             <textarea
               value={fDesc}
               onChange={(e) => setFDesc(e.target.value)}
-              placeholder="메모..."
+              placeholder={t.descPlaceholder}
               className="dtb-input"
               style={{ marginBottom: 16, height: 70, resize: 'none' }}
             />
 
             <label style={{ display: 'block', fontSize: 11, color: C.textMid, marginBottom: 6, fontWeight: 600 }}>
-              세부 Task
-              {fTasks.filter(t => t.text.trim()).length > 0 && (
+              {t.subtasks}
+              {fTasks.filter(tk => tk.text.trim()).length > 0 && (
                 <span className="dtb-tnum" style={{ marginLeft: 8, color: C.textDim, fontWeight: 500 }}>
-                  {fTasks.filter(t => t.done && t.text.trim()).length}/{fTasks.filter(t => t.text.trim()).length}
+                  {fTasks.filter(tk => tk.done && tk.text.trim()).length}/{fTasks.filter(tk => tk.text.trim()).length}
                 </span>
               )}
             </label>
@@ -1230,7 +1239,7 @@ function EditView({
                         addTaskAfter(idx);
                       }
                     }}
-                    placeholder="세부 Task 입력 (Optional)"
+                    placeholder={t.subtaskPlaceholder}
                     className="dtb-task-input"
                     style={{
                       textDecoration: task.done ? 'line-through' : 'none',
@@ -1240,7 +1249,7 @@ function EditView({
                   <button
                     type="button"
                     onClick={() => removeTask(task.id)}
-                    title="삭제"
+                    title={t.delete}
                     style={{
                       background: 'none', border: 'none', cursor: 'pointer',
                       padding: 4, color: C.textMid, display: 'flex', alignItems: 'center',
@@ -1261,10 +1270,10 @@ function EditView({
               style={{ marginBottom: 18 }}
             >
               <Plus size={13} />
-              Task 추가
+              {t.addTask}
             </button>
 
-            <label style={{ display: 'block', fontSize: 11, color: C.textMid, marginBottom: 6, fontWeight: 600 }}>색상</label>
+            <label style={{ display: 'block', fontSize: 11, color: C.textMid, marginBottom: 6, fontWeight: 600 }}>{t.color}</label>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8, flexWrap: 'wrap' }}>
               {CLAUDE_COLORS.map(c => (
                 <button
@@ -1286,7 +1295,7 @@ function EditView({
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 cursor: 'pointer', position: 'relative', overflow: 'hidden',
                 backgroundColor: C.inputBg
-              }} title="사용자 지정 색상">
+              }} title={t.customColor}>
                 <Plus size={12} color={C.textMid} />
                 <input
                   type="color"
@@ -1314,24 +1323,24 @@ function EditView({
             <div style={{ display: 'flex', gap: 8 }}>
               <button onClick={onSave} className="dtb-save-btn" type="button">
                 <Save size={15} strokeWidth={2.5} />
-                <span style={{ color: '#FFFFFF', fontWeight: 700 }}>저장</span>
+                <span style={{ color: '#FFFFFF', fontWeight: 700 }}>{t.save}</span>
               </button>
               {editing && (
-                <button onClick={onDelete} className="dtb-delete-btn" type="button" title="삭제">
+                <button onClick={onDelete} className="dtb-delete-btn" type="button" title={t.delete}>
                   <Trash2 size={15} />
                 </button>
               )}
               <button onClick={onCancel} className="dtb-cancel-btn" type="button">
-                취소
+                {t.cancel}
               </button>
             </div>
           </>
         ) : (
           <div style={{ textAlign: 'center', padding: '40px 0' }}>
             <div style={{ fontSize: 36, marginBottom: 12 }}>⏱️</div>
-            <p style={{ fontSize: 13, fontWeight: 600, color: C.text, marginBottom: 6 }}>시간 범위를 선택하세요</p>
-            <p style={{ fontSize: 11, color: C.textMid, lineHeight: 1.6 }}>
-              왼쪽 타임라인에서 드래그하거나<br/>시작 슬롯 클릭 → 종료 슬롯 클릭
+            <p style={{ fontSize: 13, fontWeight: 600, color: C.text, marginBottom: 6 }}>{t.selectTimeRange}</p>
+            <p style={{ fontSize: 11, color: C.textMid, lineHeight: 1.6, whiteSpace: 'pre-line' }}>
+              {t.selectTimeInstructions}
             </p>
             {pendingClick !== null && (
               <div style={{
@@ -1339,8 +1348,8 @@ function EditView({
                 backgroundColor: `${C.accent}1A`, color: C.accent,
                 fontSize: 12, borderRadius: 6, fontWeight: 600
               }}>
-                시작: <span className="dtb-tnum">{minToTime(pendingClick * MIN_PER_SLOT)}</span><br/>
-                <span style={{ fontSize: 10, opacity: 0.8, fontWeight: 500 }}>종료 슬롯을 클릭하세요</span>
+                {t.start} <span className="dtb-tnum">{minToTime(pendingClick * MIN_PER_SLOT)}</span><br/>
+                <span style={{ fontSize: 10, opacity: 0.8, fontWeight: 500 }}>{t.clickEndSlot}</span>
               </div>
             )}
             {error && (
@@ -1359,7 +1368,7 @@ function EditView({
   );
 }
 
-function ViewMode({ C, viewRef, boxes, sw, tw, onScroll, toggleTaskInBox, isViewingToday, selectedDate }) {
+function ViewMode({ t, C, viewRef, boxes, sw, tw, onScroll, toggleTaskInBox, isViewingToday, selectedDate }) {
   const timer = isViewingToday ? getTimerInfo(boxes) : { type: 'idle' };
   const urgent = !!timer.urgent && (timer.type === 'current' || timer.type === 'next');
   const urgentColor = C.indicator;
@@ -1396,7 +1405,7 @@ function ViewMode({ C, viewRef, boxes, sw, tw, onScroll, toggleTaskInBox, isView
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 12 }}>
               <div style={{ width: 10, height: 10, borderRadius: '50%', backgroundColor: urgent ? urgentColor : timer.box.color }} />
               <div style={{ fontSize: 11, color: urgent ? urgentColor : C.textMid, textTransform: 'uppercase', letterSpacing: '0.25em', fontWeight: 700 }}>
-                {urgent ? '⚠ 곧 종료 · 5분 이내' : '진행 중'}
+                {urgent ? t.endingSoon : t.inProgress}
               </div>
             </div>
             <div style={{ fontSize: 22, fontWeight: 700, marginBottom: 32, color: urgent ? urgentColor : C.text }}>
@@ -1408,7 +1417,7 @@ function ViewMode({ C, viewRef, boxes, sw, tw, onScroll, toggleTaskInBox, isView
             }}>
               {formatHMS(timer.remaining)}
             </div>
-            <div style={{ fontSize: 13, color: urgent ? urgentColor : C.textMid, marginTop: 20, fontWeight: 600 }}>남은 시간</div>
+            <div style={{ fontSize: 13, color: urgent ? urgentColor : C.textMid, marginTop: 20, fontWeight: 600 }}>{t.timeRemaining}</div>
             <div style={{ marginTop: 24, maxWidth: 480, margin: '24px auto 0', height: 6, backgroundColor: C.hover, borderRadius: 3, overflow: 'hidden' }}>
               <div style={{ height: '100%', width: `${timer.progress * 100}%`, backgroundColor: timer.box.color, transition: 'width 0.3s' }} />
             </div>
@@ -1421,7 +1430,7 @@ function ViewMode({ C, viewRef, boxes, sw, tw, onScroll, toggleTaskInBox, isView
               <div style={{ marginTop: 40, maxWidth: 480, margin: '40px auto 0' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, padding: '0 12px' }}>
                   <span style={{ fontSize: 11, color: C.textMid, textTransform: 'uppercase', letterSpacing: '0.2em', fontWeight: 600 }}>
-                    세부 Task
+                    {t.subtasks}
                   </span>
                   <span className="dtb-tnum" style={{ fontSize: 11, color: C.textMid, fontWeight: 600 }}>
                     {timer.box.tasks.filter(t => t.done).length} / {timer.box.tasks.length}
@@ -1470,7 +1479,7 @@ function ViewMode({ C, viewRef, boxes, sw, tw, onScroll, toggleTaskInBox, isView
         {timer.type === 'next' && (
           <>
             <div style={{ fontSize: 11, color: urgent ? urgentColor : C.textMid, textTransform: 'uppercase', letterSpacing: '0.25em', fontWeight: 700, marginBottom: 12 }}>
-              {urgent ? '⚠ 곧 시작 · 5분 이내' : '다음 일정까지'}
+              {urgent ? t.startingSoon : t.untilNext}
             </div>
             <div style={{ fontSize: 20, fontWeight: 700, marginBottom: 32, color: urgent ? urgentColor : C.textMid, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
               <div style={{ width: 10, height: 10, borderRadius: '50%', backgroundColor: urgent ? urgentColor : timer.box.color }} />
@@ -1483,17 +1492,17 @@ function ViewMode({ C, viewRef, boxes, sw, tw, onScroll, toggleTaskInBox, isView
               {formatHMS(timer.remaining)}
             </div>
             <div className="dtb-tnum" style={{ fontSize: 13, color: urgent ? urgentColor : C.textMid, marginTop: 20, fontWeight: 600 }}>
-              {minToTime(timer.box.start)} 시작 예정
+              {minToTime(timer.box.start)} {t.scheduledStart}
             </div>
           </>
         )}
         {timer.type === 'idle' && (
           <>
             <div style={{ fontSize: 11, color: C.textMid, textTransform: 'uppercase', letterSpacing: '0.25em', fontWeight: 600, marginBottom: 12 }}>
-              {isViewingToday ? '여유 시간' : formatDate(selectedDate)}
+              {isViewingToday ? t.freeTime : formatDate(selectedDate, t)}
             </div>
             <div style={{ fontSize: 20, fontWeight: 700, marginBottom: 32, color: C.textMid }}>
-              {isViewingToday ? '예정된 일정이 없습니다' : (boxes.length > 0 ? `${boxes.length}개의 타임박스` : '예정된 일정이 없습니다')}
+              {isViewingToday ? t.noSchedule : (boxes.length > 0 ? `${boxes.length}${t.timeboxCount}` : t.noSchedule)}
             </div>
             {isViewingToday && (
               <>
@@ -1503,7 +1512,7 @@ function ViewMode({ C, viewRef, boxes, sw, tw, onScroll, toggleTaskInBox, isView
                 }}>
                   {currentTimeHMS()}
                 </div>
-                <div style={{ fontSize: 13, color: C.textMid, marginTop: 20, fontWeight: 600 }}>현재 시각</div>
+                <div style={{ fontSize: 13, color: C.textMid, marginTop: 20, fontWeight: 600 }}>{t.currentTime}</div>
               </>
             )}
           </>
@@ -1513,8 +1522,8 @@ function ViewMode({ C, viewRef, boxes, sw, tw, onScroll, toggleTaskInBox, isView
       {/* Timeline at bottom */}
       <div style={{ borderTop: `1px solid ${C.border}`, backgroundColor: C.cardAlt, padding: '16px 24px 20px' }}>
         <div style={{ fontSize: 10, color: C.textMid, marginBottom: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.1em' }}>
-          <span>타임라인</span>
-          <span style={{ opacity: 0.7, textTransform: 'none', letterSpacing: 'normal', fontWeight: 500 }}>마우스 휠로 좌우 스크롤 · 5초 후 자동 복귀</span>
+          <span>{t.timeline}</span>
+          <span style={{ opacity: 0.7, textTransform: 'none', letterSpacing: 'normal', fontWeight: 500 }}>{t.timelineHint}</span>
         </div>
         <div style={{ position: 'relative' }}>
           <div style={{ position: 'absolute', top: 0, left: 0, bottom: 0, width: 48, background: `linear-gradient(to right, ${C.cardAlt} 0%, ${C.cardAlt}cc 50%, transparent 100%)`, pointerEvents: 'none', zIndex: 10 }} />
@@ -1529,7 +1538,7 @@ function ViewMode({ C, viewRef, boxes, sw, tw, onScroll, toggleTaskInBox, isView
               borderRadius: 4, fontWeight: 700, whiteSpace: 'nowrap', letterSpacing: '0.1em', textTransform: 'uppercase',
               boxShadow: `0 1px 3px ${C.indicator}66`
             }}>
-              지금
+              {t.now}
             </div>
             <div style={{
               position: 'absolute', top: 0, left: '50%', transform: 'translateX(-50%)',
@@ -1631,12 +1640,12 @@ function ViewMode({ C, viewRef, boxes, sw, tw, onScroll, toggleTaskInBox, isView
       </div>
 
       <div style={{ padding: '12px 24px', borderTop: `1px solid ${C.border}`, display: 'flex', justifyContent: 'space-between', fontSize: 11, color: C.textMid }}>
-        <div>전체 <span style={{ color: C.text, fontWeight: 700 }}>{boxes.length}</span>개의 타임박스</div>
+        <div>{t.total} <span style={{ color: C.text, fontWeight: 700 }}>{boxes.length}</span>{t.timeboxCount}</div>
         <div>
-          채워진 시간: <span style={{ color: C.text, fontWeight: 700 }}>
+          {t.filledTime} <span style={{ color: C.text, fontWeight: 700 }}>
             {(() => {
-              const t = boxes.reduce((s, b) => s + (b.end - b.start), 0);
-              return `${Math.floor(t/60)}시간 ${t%60}분`;
+              const total = boxes.reduce((s, b) => s + (b.end - b.start), 0);
+              return `${Math.floor(total/60)}${t.hourUnit} ${total%60}${t.minuteUnit}`;
             })()}
           </span>
         </div>
