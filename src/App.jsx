@@ -896,11 +896,11 @@ export default function App() {
             { label: copied ? t.copied : t.copyLink, icon: <Link size={14} />, onClick: async () => {
               try { await navigator.clipboard.writeText('https://timebox.im'); setCopied(true); setTimeout(() => setCopied(false), 2000); } catch (e) {}
             }},
-            { label: t.sendSMS, icon: <MessageCircle size={14} />, onClick: () => {
+            ...(/iPhone|iPad|iPod|Android/i.test(navigator.userAgent) ? [{ label: t.sendSMS, icon: <MessageCircle size={14} />, onClick: () => {
               const msg = encodeURIComponent(t.shareMessage);
-              window.open(/iPhone|iPad|iPod|Android/i.test(navigator.userAgent) ? `sms:?body=${msg}` : `sms:?body=${msg}`, '_blank');
+              window.open(`sms:?body=${msg}`, '_blank');
               setShareOpen(false);
-            }},
+            }}] : []),
           ].map((item, i) => (
             <button key={i} onClick={item.onClick} style={{
               width: '100%', display: 'flex', alignItems: 'center', gap: 10,
