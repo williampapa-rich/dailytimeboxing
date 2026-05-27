@@ -857,7 +857,7 @@ export default function App() {
           />
         )}
       </div>
-      <MusicPlayer />
+      <MusicPlayer appColors={C} />
       {/* Settings button — fixed, right of music button */}
       <button
         onClick={() => setSettingsOpen(true)}
@@ -865,10 +865,12 @@ export default function App() {
         style={{
           position: 'fixed', bottom: 20, right: 20, zIndex: 51,
           width: 48, height: 48, borderRadius: 999,
-          border: 'none', cursor: 'pointer',
-          backgroundColor: '#1a1a1a', color: '#fff',
-          boxShadow: '0 4px 20px rgba(0,0,0,0.35)',
+          border: `1px solid ${C.border}`, cursor: 'pointer',
+          backgroundColor: C.card, color: C.text,
+          backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
+          boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
+          transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
         }}
       >
         <Settings size={20} />
@@ -938,8 +940,9 @@ function EditView({
                   style={{ display: 'flex', alignItems: 'stretch', height: SLOT_HEIGHT, cursor: 'pointer' }}
                 >
                   <div className="dtb-tnum" style={{
-                    width: TIME_LABEL_WIDTH, flexShrink: 0, display: 'flex', alignItems: 'center',
-                    fontSize: 11, color: isHour ? C.text : C.textMid, fontWeight: isHour ? 600 : 400
+                    width: TIME_LABEL_WIDTH, flexShrink: 0, display: 'flex', alignItems: 'flex-start',
+                    fontSize: 11, color: isHour ? C.text : C.textMid, fontWeight: isHour ? 600 : 400,
+                    lineHeight: 1, paddingTop: 0,
                   }}>
                     {minToTime(slotStart)}
                   </div>
@@ -1306,9 +1309,25 @@ function ViewMode({ C, viewRef, boxes, sw, tw, onScroll, toggleTaskInBox, isView
   const timer = isViewingToday ? getTimerInfo(boxes) : { type: 'idle' };
   const urgent = !!timer.urgent && (timer.type === 'current' || timer.type === 'next');
   const urgentColor = C.indicator;
+  const dragRef = useRef({ active: false, startX: 0, scrollLeft: 0 });
+  const onDragStart = (e) => {
+    const el = e.currentTarget;
+    dragRef.current = { active: true, startX: e.clientX, scrollLeft: el.scrollLeft };
+    el.style.cursor = 'grabbing';
+  };
+  const onDragMove = (e) => {
+    if (!dragRef.current.active) return;
+    e.preventDefault();
+    const dx = e.clientX - dragRef.current.startX;
+    e.currentTarget.scrollLeft = dragRef.current.scrollLeft - dx;
+  };
+  const onDragEnd = (e) => {
+    dragRef.current.active = false;
+    e.currentTarget.style.cursor = 'grab';
+  };
 
   return (
-    <div style={{ backgroundColor: C.card, borderRadius: 12, border: `1px solid ${C.border}`, overflow: 'hidden', animation: 'dtb-fade-in 0.5s cubic-bezier(0.4, 0, 0.2, 1)' }}>
+    <div style={{ backgroundColor: C.card, borderRadius: 12, border: `1px solid ${C.border}`, overflow: 'hidden', animation: 'dtb-fade-in 0.5s cubic-bezier(0.4, 0, 0.2, 1)', minHeight: 520 }}>
       <style>{`
         @keyframes dtb-urgent-pulse {
           0%, 100% { opacity: 1; }
@@ -1473,8 +1492,12 @@ function ViewMode({ C, viewRef, boxes, sw, tw, onScroll, toggleTaskInBox, isView
           <div
             ref={viewRef}
             onScroll={onScroll}
+            onMouseDown={onDragStart}
+            onMouseMove={onDragMove}
+            onMouseUp={onDragEnd}
+            onMouseLeave={onDragEnd}
             className="dtb-no-scrollbar"
-            style={{ overflowX: 'auto', overflowY: 'hidden', width: '100%' }}
+            style={{ overflowX: 'auto', overflowY: 'hidden', width: '100%', cursor: 'grab' }}
           >
             <div style={{ position: 'relative', width: tw, height: 144 }}>
               {sw > 0 && (

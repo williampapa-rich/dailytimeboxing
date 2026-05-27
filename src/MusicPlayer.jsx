@@ -25,7 +25,7 @@ function fmtDuration(ms) {
   return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
 }
 
-export default function MusicPlayer() {
+export default function MusicPlayer({ appColors }) {
   const [isOpen, setIsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('spotify');
   const [connected, setConnected] = useState({ spotify: false, youtube: false });
@@ -332,11 +332,14 @@ export default function MusicPlayer() {
           width: track && playing ? 'auto' : 48,
           maxWidth: 260,
           padding: track && playing ? '0 14px 0 6px' : 0,
-          borderRadius: 999, border: 'none', cursor: 'pointer',
-          backgroundColor: '#1a1a1a', color: '#fff',
-          boxShadow: '0 4px 20px rgba(0,0,0,0.35)',
+          borderRadius: 999, cursor: 'pointer',
+          border: appColors ? `1px solid ${appColors.border}` : 'none',
+          backgroundColor: appColors ? appColors.card : '#1a1a1a',
+          color: appColors ? appColors.text : '#fff',
+          backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
+          boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
           display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-          transition: 'all 0.2s ease',
+          transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
         }}
       >
         {track && playing ? (
