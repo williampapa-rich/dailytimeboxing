@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { X, Palette, Clock, BarChart3, User, HelpCircle, LogOut, Globe } from 'lucide-react';
+import { X, Palette, Clock, BarChart3, User, HelpCircle, LogOut, Globe, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useAuthUser } from './auth.js';
 import { signInWithGoogle, signOut } from './supabase.js';
 import { THEMES } from './themes.js';
@@ -14,8 +14,92 @@ const GoogleIcon = ({ size = 16 }) => (
   </svg>
 );
 
+function useMobile() {
+  const [mobile, setMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth <= 768);
+  useEffect(() => {
+    const h = () => setMobile(window.innerWidth <= 768);
+    window.addEventListener('resize', h);
+    return () => window.removeEventListener('resize', h);
+  }, []);
+  return mobile;
+}
+
+function SectionContent({ section, C, t, lang, setLang, themeId, onChangeTheme, opacity, onChangeOpacity, isLoggedIn, avatarUrl, displayName, email, onGoogleSignIn, onLogout, busy }) {
+  if (section === 'account') return (
+    <div>
+      <h2 style={{ fontSize: 18, fontWeight: 700, margin: '0 0 20px', color: C.text }}>{t.account}</h2>
+      {isLoggedIn ? (<div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 20, padding: 16, backgroundColor: C.hover, borderRadius: 10 }}>
+          {avatarUrl ? <img src={avatarUrl} alt="" width={48} height={48} style={{ borderRadius: '50%', flexShrink: 0 }} referrerPolicy="no-referrer" />
+            : <div style={{ width: 48, height: 48, borderRadius: '50%', backgroundColor: C.accent, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, fontWeight: 700, flexShrink: 0 }}>{(displayName || email || '?')[0]?.toUpperCase()}</div>}
+          <div>
+            <div style={{ fontSize: 15, fontWeight: 700, color: C.text }}>{displayName || t.user}</div>
+            {email && <div style={{ fontSize: 12, color: C.textMid, marginTop: 2 }}>{email}</div>}
+            <div style={{ fontSize: 11, color: C.textDim, marginTop: 4 }}>{t.connectedWithGoogle}</div>
+          </div>
+        </div>
+        <button onClick={onLogout} disabled={busy} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 16px', borderRadius: 8, border: `1px solid ${C.borderStrong}`, backgroundColor: 'transparent', color: C.text, cursor: 'pointer', fontSize: 13, fontWeight: 500 }}><LogOut size={14} />{t.logout}</button>
+      </div>) : (<div style={{ padding: '40px 0', textAlign: 'center' }}>
+        <div style={{ fontSize: 40, marginBottom: 12 }}>👤</div>
+        <div style={{ fontSize: 15, fontWeight: 600, color: C.text, marginBottom: 6 }}>{t.multiDeviceTitle}</div>
+        <div style={{ fontSize: 12, color: C.textMid, marginBottom: 20, lineHeight: 1.6, whiteSpace: 'pre-line' }}>{t.multiDeviceDesc}</div>
+        <button onClick={onGoogleSignIn} disabled={busy} style={{ display: 'inline-flex', alignItems: 'center', gap: 10, padding: '12px 24px', borderRadius: 10, backgroundColor: '#fff', color: '#333', border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: 14 }}><GoogleIcon size={18} />{t.startWithGoogle}</button>
+      </div>)}
+    </div>
+  );
+  if (section === 'themes') return (
+    <div>
+      <h2 style={{ fontSize: 18, fontWeight: 700, margin: '0 0 20px', color: C.text }}>{t.themes}</h2>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12 }}>
+        {Object.values(THEMES).map(th => { const active = themeId === th.id; return (
+          <button key={th.id} onClick={() => onChangeTheme(th.id)} style={{ border: active ? `2px solid ${C.accent}` : '2px solid transparent', borderRadius: 12, overflow: 'hidden', cursor: 'pointer', backgroundColor: C.hover, padding: 0, textAlign: 'left', outline: active ? `2px solid ${C.accent}44` : 'none', outlineOffset: 2, transition: 'all 0.15s' }}>
+            <div style={{ width: '100%', height: 100, backgroundImage: `url(${th.bgImage})`, backgroundSize: 'cover', backgroundPosition: 'center' }} />
+            <div style={{ padding: '10px 12px' }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: C.text }}>{th.name}</div>
+              <div style={{ fontSize: 11, color: C.textMid, marginTop: 2 }}>{th.colors.scheme === 'dark' ? t.dark : t.light}</div>
+            </div>
+          </button>
+        ); })}
+      </div>
+      <div style={{ marginTop: 24 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+          <span style={{ fontSize: 13, fontWeight: 600, color: C.text }}>{t.opacity}</span>
+          <span style={{ fontSize: 12, color: C.textMid, fontVariantNumeric: 'tabular-nums' }}>{Math.round(opacity * 100)}%</span>
+        </div>
+        <input type="range" min={10} max={100} step={5} value={Math.round(opacity * 100)} onChange={(e) => onChangeOpacity(parseInt(e.target.value, 10) / 100)} style={{ width: '100%', accentColor: C.accent, cursor: 'pointer' }} />
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: C.textDim, marginTop: 4 }}><span>{t.transparent}</span><span>{t.opaque}</span></div>
+      </div>
+    </div>
+  );
+  if (section === 'clock') return (<div><h2 style={{ fontSize: 18, fontWeight: 700, margin: '0 0 20px', color: C.text }}>{t.clock}</h2><p style={{ color: C.textMid, fontSize: 13 }}>{t.comingSoon}</p></div>);
+  if (section === 'stats') return (<div><h2 style={{ fontSize: 18, fontWeight: 700, margin: '0 0 20px', color: C.text }}>{t.stats}</h2><p style={{ color: C.textMid, fontSize: 13 }}>{t.comingSoon}</p></div>);
+  if (section === 'support') return (
+    <div>
+      <h2 style={{ fontSize: 18, fontWeight: 700, margin: '0 0 20px', color: C.text }}>{t.support}</h2>
+      <div style={{ padding: 20, backgroundColor: C.hover, borderRadius: 10, lineHeight: 1.7 }}>
+        <div style={{ fontSize: 13, color: C.text, marginBottom: 12 }}>{t.supportMsg}</div>
+        <a href="mailto:canbe0to1@gmail.com" style={{ fontSize: 14, fontWeight: 600, color: C.accent, textDecoration: 'none' }}>canbe0to1@gmail.com</a>
+      </div>
+    </div>
+  );
+  if (section === 'language') return (
+    <div>
+      <h2 style={{ fontSize: 18, fontWeight: 700, margin: '0 0 20px', color: C.text }}>{t.language}</h2>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+        {SUPPORTED_LANGS.map(code => { const active = lang === code; return (
+          <button key={code} onClick={() => setLang(code)} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', borderRadius: 10, border: active ? `2px solid ${C.accent}` : '2px solid transparent', backgroundColor: active ? C.hover : 'transparent', color: C.text, cursor: 'pointer', fontSize: 14, fontWeight: active ? 600 : 400, textAlign: 'left', transition: 'all 0.15s' }}
+            onMouseEnter={(e) => { if (!active) e.currentTarget.style.backgroundColor = C.hover; }} onMouseLeave={(e) => { if (!active) e.currentTarget.style.backgroundColor = 'transparent'; }}
+          >{LANG_NAMES[code]}</button>
+        ); })}
+      </div>
+    </div>
+  );
+  return null;
+}
+
 export default function SettingsPanel({ isOpen, onClose, themeId, onChangeTheme, opacity, onChangeOpacity, C }) {
   const { t, lang, setLang } = useI18n();
+  const mobile = useMobile();
   const MENU = [
     { key: 'account', icon: User, label: t.account },
     { key: 'themes', icon: Palette, label: t.themes },
@@ -24,11 +108,15 @@ export default function SettingsPanel({ isOpen, onClose, themeId, onChangeTheme,
     { key: 'support', icon: HelpCircle, label: t.support },
     { key: 'language', icon: Globe, label: t.language },
   ];
-  const [activeSection, setActiveSection] = useState('account');
+  const [activeSection, setActiveSection] = useState(null);
   const [busy, setBusy] = useState(false);
   const innerRef = useRef(null);
   const { user, loaded, isAnonymous, email, avatarUrl, displayName } = useAuthUser();
   const isLoggedIn = loaded && user && !isAnonymous;
+
+  useEffect(() => {
+    if (!isOpen) setActiveSection(mobile ? null : 'account');
+  }, [isOpen, mobile]);
 
   useEffect(() => {
     const onKey = (e) => { if (e.key === 'Escape') onClose(); };
@@ -39,6 +127,85 @@ export default function SettingsPanel({ isOpen, onClose, themeId, onChangeTheme,
   const onGoogleSignIn = async () => { setBusy(true); try { await signInWithGoogle(); } catch (e) { console.error(e); } finally { setBusy(false); } };
   const onLogout = async () => { setBusy(true); try { await signOut(); window.location.reload(); } finally { setBusy(false); } };
 
+  const sectionProps = { C, t, lang, setLang, themeId, onChangeTheme, opacity, onChangeOpacity, isLoggedIn, avatarUrl, displayName, email, onGoogleSignIn, onLogout, busy };
+
+  // Mobile: full-screen drill-down
+  if (mobile) {
+    return (
+      <>
+        <div onClick={() => onClose()} style={{ position: 'fixed', inset: 0, zIndex: 100, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)', opacity: isOpen ? 1 : 0, visibility: isOpen ? 'visible' : 'hidden', pointerEvents: isOpen ? 'auto' : 'none', transition: 'opacity 0.25s ease, visibility 0.25s ease' }} />
+        <div onClick={(e) => e.stopPropagation()} style={{
+          position: 'fixed', inset: '10vh 16px 10vh 16px', zIndex: 101,
+          backgroundColor: C.card, color: C.text,
+          borderRadius: 16, border: `1px solid ${C.border}`,
+          backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
+          boxShadow: '0 24px 80px rgba(0,0,0,0.6)',
+          display: 'flex', flexDirection: 'column', overflow: 'hidden',
+          opacity: isOpen ? 1 : 0, visibility: isOpen ? 'visible' : 'hidden',
+          transform: isOpen ? 'translateY(0)' : 'translateY(20px)',
+          transition: 'all 0.25s ease',
+        }}>
+          {/* Header */}
+          <div style={{ display: 'flex', alignItems: 'center', padding: '14px 16px', borderBottom: `1px solid ${C.border}`, flexShrink: 0 }}>
+            {activeSection ? (
+              <button onClick={() => setActiveSection(null)} style={{ display: 'flex', alignItems: 'center', gap: 4, border: 'none', background: 'none', color: C.accent, cursor: 'pointer', fontSize: 14, fontWeight: 500, padding: 0 }}>
+                <ChevronLeft size={18} />{t.settings}
+              </button>
+            ) : (
+              <div style={{ fontSize: 16, fontWeight: 700, color: C.text }}>{t.settings}</div>
+            )}
+            <button onClick={() => onClose()} style={{ marginLeft: 'auto', width: 28, height: 28, borderRadius: 6, border: 'none', backgroundColor: 'transparent', color: C.textMid, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <X size={18} />
+            </button>
+          </div>
+
+          {/* Content */}
+          <div style={{ flex: 1, overflowY: 'auto', padding: '8px 0' }}>
+            {!activeSection ? (
+              <>
+                {/* Menu list */}
+                {MENU.map(m => { const Icon = m.icon; return (
+                  <button key={m.key} onClick={() => setActiveSection(m.key)} style={{
+                    width: '100%', display: 'flex', alignItems: 'center', gap: 12, padding: '14px 20px',
+                    border: 'none', backgroundColor: 'transparent', color: C.text, cursor: 'pointer',
+                    fontSize: 15, fontWeight: 500, textAlign: 'left',
+                  }}>
+                    <Icon size={18} color={C.textMid} />
+                    <span style={{ flex: 1 }}>{m.label}</span>
+                    <ChevronRight size={16} color={C.textDim} />
+                  </button>
+                ); })}
+                {/* Auth card at bottom */}
+                <div style={{ margin: '16px 16px 8px', padding: 14, backgroundColor: C.hover, borderRadius: 10, textAlign: 'center' }}>
+                  {isLoggedIn ? (<>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10, textAlign: 'left' }}>
+                      {avatarUrl ? <img src={avatarUrl} alt="" width={32} height={32} style={{ borderRadius: '50%', flexShrink: 0 }} referrerPolicy="no-referrer" />
+                        : <div style={{ width: 32, height: 32, borderRadius: '50%', backgroundColor: C.accent, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 700, flexShrink: 0 }}>{(displayName || email || '?')[0]?.toUpperCase()}</div>}
+                      <div style={{ minWidth: 0, flex: 1 }}>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: C.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{displayName || t.user}</div>
+                        {email && <div style={{ fontSize: 11, color: C.textMid, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{email}</div>}
+                      </div>
+                    </div>
+                    <button onClick={onLogout} disabled={busy} style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '8px 10px', borderRadius: 8, border: `1px solid ${C.borderStrong}`, backgroundColor: 'transparent', color: C.text, cursor: 'pointer', fontSize: 12, fontWeight: 500 }}><LogOut size={13} />{t.logout}</button>
+                  </>) : (<>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: C.text, marginBottom: 4 }}>{t.loginRequired}</div>
+                    <div style={{ fontSize: 11, color: C.textMid, marginBottom: 12 }}>{t.keepDataSafe}</div>
+                    <button onClick={onGoogleSignIn} disabled={busy} style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '10px 12px', borderRadius: 8, backgroundColor: '#fff', color: '#333', border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: 13 }}><GoogleIcon size={16} />{t.startWithGoogle}</button>
+                  </>)}
+                </div>
+              </>
+            ) : (
+              <div style={{ padding: '8px 20px 20px' }}>
+                <SectionContent section={activeSection} {...sectionProps} />
+              </div>
+            )}
+          </div>
+        </div>
+      </>
+    );
+  }
+
+  // Desktop: sidebar + detail
   return (
     <>
       <div onClick={() => onClose()} style={{ position: 'fixed', inset: 0, zIndex: 100, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)', opacity: isOpen ? 1 : 0, visibility: isOpen ? 'visible' : 'hidden', pointerEvents: isOpen ? 'auto' : 'none', transition: 'opacity 0.25s ease, visibility 0.25s ease' }} />
@@ -47,7 +214,7 @@ export default function SettingsPanel({ isOpen, onClose, themeId, onChangeTheme,
           <aside style={{ display: 'flex', flexDirection: 'column', backgroundColor: C.cardAlt, borderRight: `1px solid ${C.border}`, padding: '16px 10px 10px' }}>
             <div style={{ fontSize: 13, fontWeight: 700, color: C.text, padding: '8px 12px 16px' }}>{t.settings}</div>
             <nav style={{ display: 'flex', flexDirection: 'column', gap: 2, flex: 1 }}>
-              {MENU.map(m => { const Icon = m.icon; const active = activeSection === m.key; return (
+              {MENU.map(m => { const Icon = m.icon; const active = (activeSection || 'account') === m.key; return (
                 <button key={m.key} onClick={() => setActiveSection(m.key)} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', borderRadius: 8, border: 'none', cursor: 'pointer', textAlign: 'left', fontSize: 13, backgroundColor: active ? C.hover : 'transparent', color: active ? C.text : C.textMid, fontWeight: active ? 600 : 400, transition: 'all 0.12s' }}
                   onMouseEnter={(e) => { if (!active) e.currentTarget.style.backgroundColor = C.hover; }} onMouseLeave={(e) => { if (!active) e.currentTarget.style.backgroundColor = 'transparent'; }}
                 ><Icon size={16} />{m.label}</button>
@@ -76,67 +243,7 @@ export default function SettingsPanel({ isOpen, onClose, themeId, onChangeTheme,
           <section style={{ padding: '24px 32px', overflowY: 'auto', position: 'relative' }}>
             <button onClick={() => onClose()} style={{ position: 'absolute', top: 12, right: 12, width: 28, height: 28, borderRadius: 6, border: 'none', backgroundColor: 'transparent', color: C.textMid, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'color 0.15s' }}
               onMouseEnter={(e) => e.currentTarget.style.color = C.text} onMouseLeave={(e) => e.currentTarget.style.color = C.textMid}><X size={18} /></button>
-            {activeSection === 'account' && (<div>
-              <h2 style={{ fontSize: 18, fontWeight: 700, margin: '0 0 20px', color: C.text }}>{t.account}</h2>
-              {isLoggedIn ? (<div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 20, padding: 16, backgroundColor: C.hover, borderRadius: 10 }}>
-                  {avatarUrl ? <img src={avatarUrl} alt="" width={48} height={48} style={{ borderRadius: '50%', flexShrink: 0 }} referrerPolicy="no-referrer" />
-                    : <div style={{ width: 48, height: 48, borderRadius: '50%', backgroundColor: C.accent, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, fontWeight: 700, flexShrink: 0 }}>{(displayName || email || '?')[0]?.toUpperCase()}</div>}
-                  <div>
-                    <div style={{ fontSize: 15, fontWeight: 700, color: C.text }}>{displayName || t.user}</div>
-                    {email && <div style={{ fontSize: 12, color: C.textMid, marginTop: 2 }}>{email}</div>}
-                    <div style={{ fontSize: 11, color: C.textDim, marginTop: 4 }}>{t.connectedWithGoogle}</div>
-                  </div>
-                </div>
-                <button onClick={onLogout} disabled={busy} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 16px', borderRadius: 8, border: `1px solid ${C.borderStrong}`, backgroundColor: 'transparent', color: C.text, cursor: 'pointer', fontSize: 13, fontWeight: 500 }}><LogOut size={14} />{t.logout}</button>
-              </div>) : (<div style={{ padding: '40px 0', textAlign: 'center' }}>
-                <div style={{ fontSize: 40, marginBottom: 12 }}>👤</div>
-                <div style={{ fontSize: 15, fontWeight: 600, color: C.text, marginBottom: 6 }}>{t.multiDeviceTitle}</div>
-                <div style={{ fontSize: 12, color: C.textMid, marginBottom: 20, lineHeight: 1.6, whiteSpace: 'pre-line' }}>{t.multiDeviceDesc}</div>
-                <button onClick={onGoogleSignIn} disabled={busy} style={{ display: 'inline-flex', alignItems: 'center', gap: 10, padding: '12px 24px', borderRadius: 10, backgroundColor: '#fff', color: '#333', border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: 14 }}><GoogleIcon size={18} />{t.startWithGoogle}</button>
-              </div>)}
-            </div>)}
-            {activeSection === 'themes' && (<div>
-              <h2 style={{ fontSize: 18, fontWeight: 700, margin: '0 0 20px', color: C.text }}>{t.themes}</h2>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12 }}>
-                {Object.values(THEMES).map(th => { const active = themeId === th.id; return (
-                  <button key={th.id} onClick={() => onChangeTheme(th.id)} style={{ border: active ? `2px solid ${C.accent}` : '2px solid transparent', borderRadius: 12, overflow: 'hidden', cursor: 'pointer', backgroundColor: C.hover, padding: 0, textAlign: 'left', outline: active ? `2px solid ${C.accent}44` : 'none', outlineOffset: 2, transition: 'all 0.15s' }}>
-                    <div style={{ width: '100%', height: 100, backgroundImage: `url(${th.bgImage})`, backgroundSize: 'cover', backgroundPosition: 'center' }} />
-                    <div style={{ padding: '10px 12px' }}>
-                      <div style={{ fontSize: 13, fontWeight: 600, color: C.text }}>{th.name}</div>
-                      <div style={{ fontSize: 11, color: C.textMid, marginTop: 2 }}>{th.colors.scheme === 'dark' ? t.dark : t.light}</div>
-                    </div>
-                  </button>
-                ); })}
-              </div>
-              <div style={{ marginTop: 24 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                  <span style={{ fontSize: 13, fontWeight: 600, color: C.text }}>{t.opacity}</span>
-                  <span style={{ fontSize: 12, color: C.textMid, fontVariantNumeric: 'tabular-nums' }}>{Math.round(opacity * 100)}%</span>
-                </div>
-                <input type="range" min={10} max={100} step={5} value={Math.round(opacity * 100)} onChange={(e) => onChangeOpacity(parseInt(e.target.value, 10) / 100)} style={{ width: '100%', accentColor: C.accent, cursor: 'pointer' }} />
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: C.textDim, marginTop: 4 }}><span>{t.transparent}</span><span>{t.opaque}</span></div>
-              </div>
-            </div>)}
-            {activeSection === 'clock' && (<div><h2 style={{ fontSize: 18, fontWeight: 700, margin: '0 0 20px', color: C.text }}>{t.clock}</h2><p style={{ color: C.textMid, fontSize: 13 }}>{t.comingSoon}</p></div>)}
-            {activeSection === 'stats' && (<div><h2 style={{ fontSize: 18, fontWeight: 700, margin: '0 0 20px', color: C.text }}>{t.stats}</h2><p style={{ color: C.textMid, fontSize: 13 }}>{t.comingSoon}</p></div>)}
-            {activeSection === 'support' && (<div>
-              <h2 style={{ fontSize: 18, fontWeight: 700, margin: '0 0 20px', color: C.text }}>{t.support}</h2>
-              <div style={{ padding: 20, backgroundColor: C.hover, borderRadius: 10, lineHeight: 1.7 }}>
-                <div style={{ fontSize: 13, color: C.text, marginBottom: 12 }}>{t.supportMsg}</div>
-                <a href="mailto:canbe0to1@gmail.com" style={{ fontSize: 14, fontWeight: 600, color: C.accent, textDecoration: 'none' }}>canbe0to1@gmail.com</a>
-              </div>
-            </div>)}
-            {activeSection === 'language' && (<div>
-              <h2 style={{ fontSize: 18, fontWeight: 700, margin: '0 0 20px', color: C.text }}>{t.language}</h2>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                {SUPPORTED_LANGS.map(code => { const active = lang === code; return (
-                  <button key={code} onClick={() => setLang(code)} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', borderRadius: 10, border: active ? `2px solid ${C.accent}` : '2px solid transparent', backgroundColor: active ? C.hover : 'transparent', color: C.text, cursor: 'pointer', fontSize: 14, fontWeight: active ? 600 : 400, textAlign: 'left', transition: 'all 0.15s' }}
-                    onMouseEnter={(e) => { if (!active) e.currentTarget.style.backgroundColor = C.hover; }} onMouseLeave={(e) => { if (!active) e.currentTarget.style.backgroundColor = 'transparent'; }}
-                  >{LANG_NAMES[code]}</button>
-                ); })}
-              </div>
-            </div>)}
+            <SectionContent section={activeSection || 'account'} {...sectionProps} />
           </section>
         </div>
       </div>
