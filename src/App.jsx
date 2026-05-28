@@ -1797,21 +1797,21 @@ function ViewMode({ t, C, viewRef, boxes, sw, tw, onScroll, toggleTaskInBox, isV
               {sw > 0 && boxes.flatMap(box => {
                 const hourMins = new Set(Array.from({ length: 25 }, (_, h) => h * 60));
                 const marks = [];
-                if (!hourMins.has(box.start)) marks.push({ min: box.start, color: box.color });
-                if (!hourMins.has(box.end) && box.end < MINUTES_PER_DAY) marks.push({ min: box.end, color: box.color });
+                if (!hourMins.has(box.start)) marks.push(box.start);
+                if (!hourMins.has(box.end) && box.end < MINUTES_PER_DAY) marks.push(box.end);
                 return marks;
-              }).filter((m, i, arr) => arr.findIndex(x => x.min === m.min) === i).map(m => (
-                <div key={`bm-${m.min}`}>
+              }).filter((m, i, arr) => arr.indexOf(m) === i).map(m => (
+                <div key={`bm-${m}`}>
                   <div style={{
-                    position: 'absolute', left: (m.min / MIN_PER_SLOT) * sw - 0.5, top: 96,
-                    width: 1, height: 8, backgroundColor: m.color, opacity: 0.8,
+                    position: 'absolute', left: (m / MIN_PER_SLOT) * sw - 0.5, top: 98,
+                    width: 1, height: 6, backgroundColor: C.textMid, opacity: 0.6,
                   }} />
                   <div className="dtb-tnum" style={{
-                    position: 'absolute', left: (m.min / MIN_PER_SLOT) * sw, top: 112,
-                    transform: 'translateX(-50%)', fontSize: 9,
-                    color: m.color, fontWeight: 600, whiteSpace: 'nowrap', opacity: 0.9,
+                    position: 'absolute', left: (m / MIN_PER_SLOT) * sw, top: 112,
+                    transform: 'translateX(-50%)', fontSize: 10,
+                    color: C.text, fontWeight: 500, whiteSpace: 'nowrap',
                   }}>
-                    {minToTime(m.min)}
+                    {minToTime(m)}
                   </div>
                 </div>
               ))}
