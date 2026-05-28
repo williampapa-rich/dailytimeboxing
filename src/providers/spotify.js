@@ -183,6 +183,22 @@ export async function playPlaylist(playlistId, deviceId) {
   });
 }
 
+export async function playTrackInContext(track, deviceId) {
+  const q = deviceId ? `?device_id=${deviceId}` : '';
+  // Play within the album context so Spotify continues to the next track
+  const albumUri = track.album?.uri || (track.album?.id ? `spotify:album:${track.album.id}` : null);
+  if (albumUri) {
+    return api(`/v1/me/player/play${q}`, {
+      method: 'PUT',
+      body: JSON.stringify({ context_uri: albumUri, offset: { uri: track.uri } }),
+    });
+  }
+  return api(`/v1/me/player/play${q}`, {
+    method: 'PUT',
+    body: JSON.stringify({ uris: [track.uri] }),
+  });
+}
+
 export async function pause(deviceId) {
   const q = deviceId ? `?device_id=${deviceId}` : '';
   return api(`/v1/me/player/pause${q}`, { method: 'PUT' });

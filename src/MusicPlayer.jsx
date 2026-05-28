@@ -26,6 +26,8 @@ function fmtDuration(ms) {
   return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
 }
 
+const SPOTIFY_GREEN = '#1DB954';
+
 function isMobile() {
   return typeof window !== 'undefined' && window.matchMedia('(max-width: 768px)').matches;
 }
@@ -279,7 +281,8 @@ export default function MusicPlayer({ appColors }) {
     try {
       await spotify.sdkActivate();
       await ensureSpotifyDevice(false);
-      await spotify.playUris([tr.uri], spDeviceIdRef.current);
+      await spotify.playTrackInContext(tr, spDeviceIdRef.current);
+      setSpSelectedPlaylist(null);
       setSpSearchOpen(false); setSpSearchQuery(''); setSpSearchResults([]);
     } catch (e) { setSafeSpErr(e); }
   };
@@ -360,7 +363,7 @@ export default function MusicPlayer({ appColors }) {
           <div style={{ display: 'flex', gap: 2 }}>
             {activeTab === 'spotify' && spotifyConnected && (
               <>
-                <button onClick={() => setSpSearchOpen(v => !v)} title={t.searchTracks} style={iconBtn(spSearchOpen ? (AC.accent || '#1DB954') : (AC.textMid || '#999'))}>
+                <button onClick={() => setSpSearchOpen(v => !v)} title={t.searchTracks} style={iconBtn(spSearchOpen ? SPOTIFY_GREEN : (AC.textMid || '#999'))}>
                   <Search size={13} />
                 </button>
               </>
@@ -494,7 +497,7 @@ export default function MusicPlayer({ appColors }) {
                           spSeekCommit(pct * spDuration);
                         }}
                       >
-                        <div style={{ position: 'absolute', left: 0, top: 0, height: '100%', width: `${spProgressPct}%`, backgroundColor: AC.accent || '#1DB954', borderRadius: 2, transition: spSeeking ? 'none' : 'width 0.3s linear' }} />
+                        <div style={{ position: 'absolute', left: 0, top: 0, height: '100%', width: `${spProgressPct}%`, backgroundColor: SPOTIFY_GREEN, borderRadius: 2, transition: spSeeking ? 'none' : 'width 0.3s linear' }} />
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: AC.textDim || '#666', marginTop: 4, fontVariantNumeric: 'tabular-nums' }}>
                         <span>{fmtDuration(spSeeking ? spSeekValue : spPosition)}</span>
@@ -509,12 +512,12 @@ export default function MusicPlayer({ appColors }) {
                       <button onClick={spSkipPrev} style={ctrlBtn(AC.text || '#ccc')} title={t.prevTrack}><SkipBack size={18} /></button>
                       <button onClick={spTogglePlay} title={spPlaying ? t.pause : t.play}
                         style={{
-                          width: 48, height: 48, borderRadius: '50%', border: `2px solid ${AC.border || 'rgba(255,255,255,0.2)'}`,
-                          backgroundColor: 'transparent', color: AC.text || '#fff', cursor: 'pointer',
+                          width: 48, height: 48, borderRadius: '50%', border: 'none',
+                          backgroundColor: SPOTIFY_GREEN, color: '#000', cursor: 'pointer',
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
                         }}
                       >
-                        {spPlaying ? <Pause size={22} fill={AC.text || '#fff'} /> : <Play size={22} fill={AC.text || '#fff'} style={{ marginLeft: 2 }} />}
+                        {spPlaying ? <Pause size={22} fill="#000" /> : <Play size={22} fill="#000" style={{ marginLeft: 2 }} />}
                       </button>
                       <button onClick={spSkipNext} style={ctrlBtn(AC.text || '#ccc')} title={t.nextTrack}><SkipForward size={18} /></button>
                     </div>
@@ -530,10 +533,10 @@ export default function MusicPlayer({ appColors }) {
                         <button key={tr.id + '-' + i} onClick={() => spPlayTrackFromList(tr, i)} style={{
                           width: '100%', display: 'flex', alignItems: 'center', gap: 12, padding: '10px 16px',
                           border: 'none', background: isCurrent ? (AC.hover || 'rgba(255,255,255,0.06)') : 'transparent',
-                          color: isCurrent ? (AC.accent || '#1DB954') : (AC.text || '#ddd'), cursor: 'pointer', textAlign: 'left',
+                          color: isCurrent ? SPOTIFY_GREEN : (AC.text || '#ddd'), cursor: 'pointer', textAlign: 'left',
                           transition: 'background 0.1s',
                         }}>
-                          <span style={{ width: 20, textAlign: 'center', fontSize: 12, color: isCurrent ? (AC.accent || '#1DB954') : (AC.textDim || '#666'), fontWeight: isCurrent ? 700 : 400, flexShrink: 0 }}>
+                          <span style={{ width: 20, textAlign: 'center', fontSize: 12, color: isCurrent ? SPOTIFY_GREEN : (AC.textDim || '#666'), fontWeight: isCurrent ? 700 : 400, flexShrink: 0 }}>
                             {isCurrent && spPlaying ? '♪' : i + 1}
                           </span>
                           <div style={{ minWidth: 0, flex: 1 }}>
