@@ -129,7 +129,7 @@ const getTimerInfo = (boxes) => {
 export default function App() {
   const [mode, setMode] = useState('view');
   const [themeId, setThemeId] = useState(DEFAULT_THEME);
-  const [opacity, setOpacity] = useState(0.3);
+  const [opacity, setOpacity] = useState(0.8);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [fabOpen, setFabOpen] = useState(false);
   const [copied, setCopied] = useState(false);
