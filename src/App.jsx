@@ -357,6 +357,33 @@ export default function App() {
     setPendingClick(null);
   };
 
+  const canFitInSlot = (newStart, newEnd, dragId) => {
+    const dur = newEnd - newStart;
+    const slotStart = Math.floor(newStart / MIN_PER_SLOT) * MIN_PER_SLOT;
+    const slotEnd = slotStart + MIN_PER_SLOT;
+    const others = boxes.filter(b => b.id !== dragId && !(b.end <= slotStart || b.start >= slotEnd));
+    const totalOther = others.reduce((sum, b) => sum + Math.min(b.end, slotEnd) - Math.max(b.start, slotStart), 0);
+    return totalOther + dur <= MIN_PER_SLOT;
+  };
+
+  const fitBoxAmongOthers = (newStart, newEnd, dragId) => {
+    const dur = newEnd - newStart;
+    const others = boxes.filter(b => b.id !== dragId).sort((a, b) => a.start - b.start);
+    const overlapping = others.filter(b => !(newEnd <= b.start || newStart >= b.end));
+    if (overlapping.length === 0) return { start: newStart, end: newEnd };
+    const afterLast = Math.max(...overlapping.map(b => b.end));
+    if (afterLast + dur <= Math.ceil(newEnd / MIN_PER_SLOT) * MIN_PER_SLOT) {
+      const candidate = { start: afterLast, end: afterLast + dur };
+      if (!others.some(b => b.id !== dragId && !(candidate.end <= b.start || candidate.start >= b.end))) return candidate;
+    }
+    const beforeFirst = Math.min(...overlapping.map(b => b.start));
+    if (beforeFirst - dur >= Math.floor(newStart / MIN_PER_SLOT) * MIN_PER_SLOT) {
+      const candidate = { start: beforeFirst - dur, end: beforeFirst };
+      if (!others.some(b => b.id !== dragId && !(candidate.end <= b.start || candidate.start >= b.end))) return candidate;
+    }
+    return null;
+  };
+
   useEffect(() => {
     if (!boxDrag) return;
     const onMove = (e) => {
@@ -366,9 +393,10 @@ export default function App() {
       const newStart = boxDrag.origStart + offset;
       const newEnd = boxDrag.origEnd + offset;
       const inBounds = newStart >= 0 && newEnd <= MINUTES_PER_DAY;
-      const conflict = inBounds && boxes.some(b =>
+      const hasOverlap = inBounds && boxes.some(b =>
         b.id !== boxDrag.id && !(newEnd <= b.start || newStart >= b.end)
       );
+      const conflict = hasOverlap && !canFitInSlot(newStart, newEnd, boxDrag.id);
       setBoxDrag(prev => prev && ({
         ...prev,
         offset: inBounds ? offset : prev.offset,
@@ -382,13 +410,20 @@ export default function App() {
         const original = boxes.find(b => b.id === prev.id);
         if (!prev.moved) {
           if (original) openEdit(original);
-        } else if (prev.offset !== 0 && !prev.conflict && original) {
-          const moved = {
-            ...original,
-            start: prev.origStart + prev.offset,
-            end: prev.origEnd + prev.offset,
-          };
-          save(boxes.map(b => b.id === prev.id ? moved : b));
+        } else if (prev.offset !== 0 && original) {
+          const newStart = prev.origStart + prev.offset;
+          const newEnd = prev.origEnd + prev.offset;
+          const hasOverlap = boxes.some(b =>
+            b.id !== prev.id && !(newEnd <= b.start || newStart >= b.end)
+          );
+          if (!hasOverlap) {
+            save(boxes.map(b => b.id === prev.id ? { ...original, start: newStart, end: newEnd } : b));
+          } else {
+            const fitted = fitBoxAmongOthers(newStart, newEnd, prev.id);
+            if (fitted) {
+              save(boxes.map(b => b.id === prev.id ? { ...original, start: fitted.start, end: fitted.end } : b));
+            }
+          }
         }
         return null;
       });
