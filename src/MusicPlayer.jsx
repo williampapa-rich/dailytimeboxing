@@ -363,11 +363,6 @@ export default function MusicPlayer({ appColors }) {
                 <button onClick={() => setSpSearchOpen(v => !v)} title={t.searchTracks} style={iconBtn(spSearchOpen ? (AC.accent || '#1DB954') : (AC.textMid || '#999'))}>
                   <Search size={13} />
                 </button>
-                {spPlaylists.length > 0 && (
-                  <button onClick={() => setSpPlaylistDropdownOpen(v => !v)} title={t.playlist} style={iconBtn(AC.textMid || '#999')}>
-                    <ChevronDown size={14} />
-                  </button>
-                )}
               </>
             )}
             <button onClick={() => setIsOpen(false)} style={{ width: 28, height: 28, borderRadius: 6, border: 'none', backgroundColor: 'transparent', color: AC.textMid || '#999', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -392,9 +387,22 @@ export default function MusicPlayer({ appColors }) {
               </div>
             ) : (
               <>
-                {/* Playlist dropdown */}
+                {/* Playlist selector — always visible */}
+                <div style={{ padding: '10px 14px 0', flexShrink: 0 }}>
+                  <button onClick={() => setSpPlaylistDropdownOpen(v => !v)} style={{
+                    width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    padding: '8px 10px', borderRadius: 6,
+                    backgroundColor: AC.hover || 'rgba(255,255,255,0.06)', border: `1px solid ${AC.border || 'rgba(255,255,255,0.08)'}`,
+                    color: AC.text || '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                  }}>
+                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: spSelectedPlaylist ? (AC.text || '#fff') : (AC.textMid || '#888') }}>
+                      {spBusy ? t.loading : (spSelectedPlaylist ? spSelectedPlaylist.name : t.selectPlaylist)}
+                    </span>
+                    <ChevronDown size={14} color={AC.textMid || '#888'} />
+                  </button>
+                </div>
                 {spPlaylistDropdownOpen && spPlaylists.length > 0 && (
-                  <div style={{ maxHeight: 240, overflowY: 'auto', borderBottom: `1px solid ${AC.border || 'rgba(255,255,255,0.06)'}`, flexShrink: 0 }}>
+                  <div style={{ maxHeight: 240, overflowY: 'auto', margin: '4px 14px 0', borderRadius: 6, border: `1px solid ${AC.border || 'rgba(255,255,255,0.06)'}`, flexShrink: 0 }}>
                     {spPlaylists.map(p => {
                       const isActive = spSelectedPlaylist?.id === p.id;
                       const thumb = p.images?.[0]?.url;
@@ -409,6 +417,11 @@ export default function MusicPlayer({ appColors }) {
                         </button>
                       );
                     })}
+                  </div>
+                )}
+                {spPlaylistDropdownOpen && spPlaylists.length === 0 && !spBusy && (
+                  <div style={{ padding: '12px 14px', fontSize: 11, color: AC.textMid || '#888', textAlign: 'center' }}>
+                    {t.noTrack}
                   </div>
                 )}
 
