@@ -281,11 +281,12 @@ export default function MusicPlayer({ appColors }) {
     try {
       await spotify.sdkActivate();
       await ensureSpotifyDevice(false);
-      // Play within the artist's context starting from this track, so
-      // Spotify continues with the artist's other tracks + autoplay radio.
-      const artistUri = tr.artists?.[0]?.uri || (tr.artists?.[0]?.id ? `spotify:artist:${tr.artists[0].id}` : null);
-      if (artistUri) {
-        await spotify.playContextFrom(artistUri, tr.uri, spDeviceIdRef.current);
+      // Play within the album context at the selected track (album offset
+      // works reliably), so the picked song plays first and Spotify
+      // continues to the next album tracks + autoplay radio.
+      const albumUri = tr.album?.uri || (tr.album?.id ? `spotify:album:${tr.album.id}` : null);
+      if (albumUri) {
+        await spotify.playContextFrom(albumUri, tr.uri, spDeviceIdRef.current);
       } else {
         await spotify.playUris([tr.uri], spDeviceIdRef.current);
       }
