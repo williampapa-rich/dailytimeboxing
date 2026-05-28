@@ -46,7 +46,7 @@ const translations = {
     supportMsg: '문의사항이나 버그 신고는 아래 이메일로 연락주시면 감사하겠습니다.',
     // Share
     share: '공유하기', copyLink: '링크 복사', copied: '복사 완료!', sendSMS: 'SMS 보내기',
-    shareMessage: 'TimeBox으로 하루를 계획해보세요!\nhttps://timebox.im',
+    shareMessage: 'TimeBox로 하루를 계획해보세요!\nhttps://timebox.im',
     // Music
     musicPlayer: '음악 플레이어', searchTracks: '곡 검색', disconnect: '연결 해제',
     playlist: '플레이리스트', selectPlaylist: '플레이리스트 선택',

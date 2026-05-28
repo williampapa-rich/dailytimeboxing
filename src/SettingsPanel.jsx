@@ -15,9 +15,11 @@ const GoogleIcon = ({ size = 16 }) => (
 );
 
 function useMobile() {
-  const [mobile, setMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth <= 768);
+  const check = () => typeof window !== 'undefined' && (window.innerWidth <= 768 || ('ontouchstart' in window && window.innerWidth <= 1024));
+  const [mobile, setMobile] = useState(check);
   useEffect(() => {
-    const h = () => setMobile(window.innerWidth <= 768);
+    setMobile(check());
+    const h = () => setMobile(check());
     window.addEventListener('resize', h);
     return () => window.removeEventListener('resize', h);
   }, []);
