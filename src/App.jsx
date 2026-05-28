@@ -373,21 +373,29 @@ export default function App() {
     const overlapping = boxes.filter(b => b.id !== dragId && !(newEnd <= b.start || newStart >= b.end));
     if (overlapping.length === 0) return { type: 'move', start: newStart, end: newEnd };
 
-    // Try swap with single overlapping box
+    // Try push: dragged box takes target position, other shifts by dragged box's duration
     if (overlapping.length === 1) {
       const other = overlapping[0];
       const otherDur = other.end - other.start;
-      // Swap: dragged box takes other's position, other takes dragged's original position
-      const swappedOther = { start: original.start, end: original.start + otherDur };
-      const swappedDrag = { start: other.start, end: other.start + dur };
-      // Check neither goes out of day bounds
-      if (swappedOther.end <= MINUTES_PER_DAY && swappedDrag.end <= MINUTES_PER_DAY) {
-        // Check no conflict with remaining boxes
+      const movingDown = newStart >= original.start;
+
+      let pushedDrag, pushedOther;
+      if (movingDown) {
+        // Dragging down: dragged takes other's start, other shifts down by drag duration
+        pushedDrag = { start: other.start, end: other.start + dur };
+        pushedOther = { start: other.start + dur, end: other.start + dur + otherDur };
+      } else {
+        // Dragging up: dragged takes other's end - dur, other shifts up by drag duration
+        pushedDrag = { start: other.end - dur, end: other.end };
+        pushedOther = { start: other.start - dur, end: other.start - dur + otherDur };
+      }
+
+      if (pushedOther.start >= 0 && pushedOther.end <= MINUTES_PER_DAY && pushedDrag.start >= 0 && pushedDrag.end <= MINUTES_PER_DAY) {
         const rest = boxes.filter(b => b.id !== dragId && b.id !== other.id);
-        const dragConflict = rest.some(b => !(swappedDrag.end <= b.start || swappedDrag.start >= b.end));
-        const otherConflict = rest.some(b => !(swappedOther.end <= b.start || swappedOther.start >= b.end));
+        const dragConflict = rest.some(b => !(pushedDrag.end <= b.start || pushedDrag.start >= b.end));
+        const otherConflict = rest.some(b => !(pushedOther.end <= b.start || pushedOther.start >= b.end));
         if (!dragConflict && !otherConflict) {
-          return { type: 'swap', dragStart: swappedDrag.start, dragEnd: swappedDrag.end, otherId: other.id, otherStart: swappedOther.start, otherEnd: swappedOther.end };
+          return { type: 'swap', dragStart: pushedDrag.start, dragEnd: pushedDrag.end, otherId: other.id, otherStart: pushedOther.start, otherEnd: pushedOther.end };
         }
       }
     }
