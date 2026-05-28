@@ -869,7 +869,7 @@ export default function App() {
         {isFullscreen ? <Minimize size={16} /> : <Maximize size={16} />}
       </button>
 
-      <div style={{ flex: 1, minHeight: 0, maxWidth: 1032, margin: '0 auto', padding: window.matchMedia?.('(max-width: 768px)')?.matches ? '16px 16px 88px' : '16px 24px', width: '100%', position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', justifyContent: mode === 'view' ? (window.matchMedia?.('(max-width: 768px)')?.matches ? 'flex-start' : 'center') : 'stretch', transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)' }}>
+      <div style={{ flex: 1, minHeight: 0, maxWidth: 1032, margin: '0 auto', padding: window.matchMedia?.('(max-width: 768px)')?.matches ? '48px 16px 88px' : '16px 24px', width: '100%', position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', justifyContent: mode === 'view' ? (window.matchMedia?.('(max-width: 768px)')?.matches ? 'flex-start' : 'center') : 'stretch', transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)' }}>
         {loading ? (
           <div style={{ textAlign: 'center', color: C.textMid, padding: '80px 0' }}>{t.loading}</div>
         ) : mode === 'edit' ? (
