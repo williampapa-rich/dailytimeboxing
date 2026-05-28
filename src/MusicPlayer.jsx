@@ -281,12 +281,14 @@ export default function MusicPlayer({ appColors }) {
     try {
       await spotify.sdkActivate();
       await ensureSpotifyDevice(false);
-      // Queue all search results starting from the picked track,
-      // so "next" continues through the rest of the results.
-      const uris = spSearchResults.map(r => r.uri);
-      const startIdx = uris.indexOf(tr.uri);
-      const ordered = startIdx >= 0 ? uris.slice(startIdx).concat(uris.slice(0, startIdx)) : [tr.uri];
-      await spotify.playUris(ordered, spDeviceIdRef.current);
+      // Play within the artist's context starting from this track, so
+      // Spotify continues with the artist's other tracks + autoplay radio.
+      const artistUri = tr.artists?.[0]?.uri || (tr.artists?.[0]?.id ? `spotify:artist:${tr.artists[0].id}` : null);
+      if (artistUri) {
+        await spotify.playContextFrom(artistUri, tr.uri, spDeviceIdRef.current);
+      } else {
+        await spotify.playUris([tr.uri], spDeviceIdRef.current);
+      }
       setSpSelectedPlaylist(null);
       setSpSearchOpen(false); setSpSearchQuery(''); setSpSearchResults([]);
     } catch (e) { setSafeSpErr(e); }

@@ -258,6 +258,22 @@ export async function getPlaylistTracks(playlistId) {
   return all;
 }
 
+export async function playContextFrom(contextUri, offsetUri, deviceId) {
+  const q = deviceId ? `?device_id=${deviceId}` : '';
+  try {
+    return await api(`/v1/me/player/play${q}`, {
+      method: 'PUT',
+      body: JSON.stringify({ context_uri: contextUri, offset: { uri: offsetUri } }),
+    });
+  } catch (e) {
+    // Some contexts (e.g. artist) reject offset — retry without it
+    return api(`/v1/me/player/play${q}`, {
+      method: 'PUT',
+      body: JSON.stringify({ context_uri: contextUri }),
+    });
+  }
+}
+
 export async function playUris(uris, deviceId, offsetUri) {
   const q = deviceId ? `?device_id=${deviceId}` : '';
   const body = { uris };
