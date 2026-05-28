@@ -401,6 +401,21 @@ export default function App() {
     };
   }, [boxDrag, boxes]);
 
+  const adjustForOverlap = (start, end) => {
+    const sorted = boxes.filter(b => !(end <= b.start || start >= b.end)).sort((a, b) => a.start - b.start);
+    if (sorted.length === 0) return { start, end };
+    let adjStart = start;
+    for (const b of sorted) {
+      if (b.end > adjStart && b.start <= adjStart) adjStart = b.end;
+    }
+    let adjEnd = end;
+    for (const b of sorted) {
+      if (b.start < adjEnd && b.start > adjStart) adjEnd = b.start;
+    }
+    if (adjStart >= adjEnd) return null;
+    return { start: adjStart, end: adjEnd };
+  };
+
   useEffect(() => {
     const h = () => {
       if (drag.anchor === null) return;
@@ -411,11 +426,12 @@ export default function App() {
       if (didDrag) {
         const start = minSlot * MIN_PER_SLOT;
         const end = (maxSlot + 1) * MIN_PER_SLOT;
-        if (overlaps(start, end)) {
+        const adj = adjustForOverlap(start, end);
+        if (!adj) {
           setError(t.timeConflict);
           setTimeout(() => setError(''), 2500);
         } else {
-          openEdit({ start, end });
+          openEdit(adj);
           setPendingClick(null);
         }
       } else {
@@ -426,12 +442,13 @@ export default function App() {
           const Ms = Math.max(pendingClick, anchor);
           const start = ms * MIN_PER_SLOT;
           const end = (Ms + 1) * MIN_PER_SLOT;
-          if (overlaps(start, end)) {
+          const adj = adjustForOverlap(start, end);
+          if (!adj) {
             setError(t.timeConflict);
             setTimeout(() => setError(''), 2500);
             setPendingClick(null);
           } else {
-            openEdit({ start, end });
+            openEdit(adj);
             setPendingClick(null);
           }
         }
@@ -1006,9 +1023,32 @@ function EditView({
 
   const nowTop = (nowMin / MIN_PER_SLOT) * SLOT_HEIGHT;
 
+  const autoFormatTime = (raw) => {
+    const digits = raw.replace(/\D/g, '');
+    if (digits.length <= 2) return digits;
+    if (digits.length <= 4) return digits.slice(0, -2) + ':' + digits.slice(-2);
+    return digits.slice(0, 2) + ':' + digits.slice(2, 4);
+  };
+
+  const onTimeChange = (which, val) => {
+    const formatted = autoFormatTime(val);
+    (which === 'start' ? setFStart : setFEnd)(formatted);
+    setError('');
+  };
+
   const formatTimeOnBlur = (which) => {
     const val = which === 'start' ? fStart : fEnd;
-    const m = timeToMin(val);
+    const digits = val.replace(/\D/g, '');
+    let m = timeToMin(val);
+    if (m === null && digits.length >= 1 && digits.length <= 2) {
+      const h = parseInt(digits, 10);
+      if (h >= 0 && h <= 24) m = h * 60;
+    }
+    if (m === null && digits.length === 3) {
+      const h = parseInt(digits[0], 10);
+      const mm = parseInt(digits.slice(1), 10);
+      if (h >= 0 && h <= 9 && mm >= 0 && mm < 60) m = h * 60 + mm;
+    }
     if (m !== null) {
       (which === 'start' ? setFStart : setFEnd)(minToTime(m));
     }
@@ -1198,23 +1238,25 @@ function EditView({
               <input
                 type="text"
                 value={fStart}
-                onChange={(e) => setFStart(e.target.value)}
+                onChange={(e) => onTimeChange('start', e.target.value)}
                 onBlur={() => formatTimeOnBlur('start')}
                 placeholder="HH:MM"
                 className="dtb-time-input"
                 style={{ flex: '1 1 0', minWidth: 0, width: '100%' }}
                 inputMode="numeric"
+                maxLength={5}
               />
               <span style={{ color: C.textMid, fontSize: 14, fontWeight: 500, flexShrink: 0 }}>—</span>
               <input
                 type="text"
                 value={fEnd}
-                onChange={(e) => setFEnd(e.target.value)}
+                onChange={(e) => onTimeChange('end', e.target.value)}
                 onBlur={() => formatTimeOnBlur('end')}
                 placeholder="HH:MM"
                 className="dtb-time-input"
                 style={{ flex: '1 1 0', minWidth: 0, width: '100%' }}
                 inputMode="numeric"
+                maxLength={5}
               />
             </div>
             <div className="dtb-tnum" style={{ fontSize: 11, color: C.textMid, marginBottom: 18 }}>
