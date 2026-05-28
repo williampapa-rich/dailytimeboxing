@@ -419,22 +419,25 @@ export default function App() {
 
   useEffect(() => {
     if (!boxDrag) return;
+    const dur = boxDrag.origEnd - boxDrag.origStart;
+    const minPerPx = MIN_PER_SLOT / SLOT_HEIGHT;
     const onMove = (e) => {
       const dy = e.clientY - boxDrag.startY;
-      const slotDelta = Math.round(dy / SLOT_HEIGHT);
-      const offset = slotDelta * MIN_PER_SLOT;
+      const rawOffset = Math.round(dy * minPerPx);
+      const offset = rawOffset;
       const newStart = boxDrag.origStart + offset;
       const newEnd = boxDrag.origEnd + offset;
       const inBounds = newStart >= 0 && newEnd <= MINUTES_PER_DAY;
-      const hasOverlap = inBounds && boxes.some(b =>
+      const result = inBounds ? trySwapOrFit(newStart, newEnd, boxDrag.id) : null;
+      const conflict = inBounds && !result && boxes.some(b =>
         b.id !== boxDrag.id && !(newEnd <= b.start || newStart >= b.end)
       );
-      const conflict = hasOverlap && !canFitInSlot(newStart, newEnd, boxDrag.id) && !trySwapOrFit(newStart, newEnd, boxDrag.id);
       setBoxDrag(prev => prev && ({
         ...prev,
         offset: inBounds ? offset : prev.offset,
         moved: prev.moved || Math.abs(dy) > 4,
         conflict,
+        preview: result,
       }));
     };
     const onUp = () => {
@@ -1197,14 +1200,15 @@ function EditView({
             {boxes.map(box => {
               const txt = getContrastText(box.color);
               const dragging = boxDrag && boxDrag.id === box.id && boxDrag.moved;
+              const isPushed = !dragging && boxDrag?.moved && boxDrag?.preview?.type === 'swap' && boxDrag.preview.otherId === box.id;
               const offset = dragging ? boxDrag.offset : 0;
-              const effStart = box.start + offset;
-              const effEnd = box.end + offset;
+              const effStart = isPushed ? boxDrag.preview.otherStart : (box.start + offset);
+              const effEnd = isPushed ? boxDrag.preview.otherEnd : (box.end + offset);
               const height = ((box.end - box.start) / MIN_PER_SLOT) * SLOT_HEIGHT - ROW_VERTICAL_MARGIN * 2;
               const top = (effStart / MIN_PER_SLOT) * SLOT_HEIGHT + ROW_VERTICAL_MARGIN;
               const isEditing = editing?.id === box.id;
               const taskCount = box.tasks?.length || 0;
-              const doneCount = box.tasks?.filter(t => t.done).length || 0;
+              const doneCount = box.tasks?.filter(tk => tk.done).length || 0;
               const conflict = dragging && boxDrag.conflict;
               return (
                 <div
@@ -1226,7 +1230,7 @@ function EditView({
                     transformOrigin: 'center',
                     outline: conflict ? `2px solid ${C.indicator}` : (isEditing ? `2px solid ${C.text}` : 'none'),
                     outlineOffset: (conflict || isEditing) ? 2 : 0,
-                    transition: dragging ? 'none' : 'box-shadow 0.15s, top 0.1s, transform 0.15s'
+                    transition: dragging ? 'none' : isPushed ? 'top 0.25s cubic-bezier(0.4,0,0.2,1), transform 0.15s, box-shadow 0.15s' : 'box-shadow 0.15s, top 0.1s, transform 0.15s'
                   }}
                 >
                   <div className="dtb-tnum" style={{ fontSize: 10, opacity: 0.9, fontWeight: 500 }}>
