@@ -281,7 +281,12 @@ export default function MusicPlayer({ appColors }) {
     try {
       await spotify.sdkActivate();
       await ensureSpotifyDevice(false);
-      await spotify.playTrackInContext(tr, spDeviceIdRef.current);
+      // Queue all search results starting from the picked track,
+      // so "next" continues through the rest of the results.
+      const uris = spSearchResults.map(r => r.uri);
+      const startIdx = uris.indexOf(tr.uri);
+      const ordered = startIdx >= 0 ? uris.slice(startIdx).concat(uris.slice(0, startIdx)) : [tr.uri];
+      await spotify.playUris(ordered, spDeviceIdRef.current);
       setSpSelectedPlaylist(null);
       setSpSearchOpen(false); setSpSearchQuery(''); setSpSearchResults([]);
     } catch (e) { setSafeSpErr(e); }

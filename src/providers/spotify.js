@@ -258,11 +258,13 @@ export async function getPlaylistTracks(playlistId) {
   return all;
 }
 
-export async function playUris(uris, deviceId) {
+export async function playUris(uris, deviceId, offsetUri) {
   const q = deviceId ? `?device_id=${deviceId}` : '';
+  const body = { uris };
+  if (offsetUri) body.offset = { uri: offsetUri };
   return api(`/v1/me/player/play${q}`, {
     method: 'PUT',
-    body: JSON.stringify({ uris }),
+    body: JSON.stringify(body),
   });
 }
 
