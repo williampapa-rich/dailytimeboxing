@@ -286,7 +286,7 @@ export async function initPlayer() {
   if (playerInstance) return { player: playerInstance, deviceId: deviceIdValue };
   const SpotifyNs = await loadSdk();
   const player = new SpotifyNs.Player({
-    name: 'Daily Time Boxing',
+    name: 'TimeBox',
     getOAuthToken: async (cb) => {
       const t = await getValidToken();
       cb(t);
