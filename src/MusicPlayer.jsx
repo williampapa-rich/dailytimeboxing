@@ -294,22 +294,45 @@ export default function MusicPlayer({ appColors }) {
   return (
     <>
       {/* Trigger button */}
-      <button
-        onClick={() => isMobile() ? setMobileAlert(true) : setIsOpen(v => !v)}
-        title={t.musicPlayer}
-        style={{
-          position: 'fixed', bottom: 20, left: 20, zIndex: 51,
-          height: 48, width: 48, borderRadius: 999, cursor: 'pointer',
-          border: AC.border ? `1px solid ${AC.border}` : 'none',
-          backgroundColor: AC.card || '#1a1a1a', color: AC.text || '#fff',
-          backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
-          boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
-        }}
-      >
-        <Music size={20} />
-      </button>
+      {(() => {
+        const nowTrack = (spPlaying && spTrack) ? spTrack : (ytPlaying && ytTrack) ? ytTrack : null;
+        return (
+          <button
+            onClick={() => isMobile() ? setMobileAlert(true) : setIsOpen(v => !v)}
+            title={t.musicPlayer}
+            style={{
+              position: 'fixed', bottom: 20, left: 20, zIndex: 51,
+              height: 48, minWidth: 48,
+              width: nowTrack ? 'auto' : 48, maxWidth: 260,
+              padding: nowTrack ? '0 14px 0 6px' : 0,
+              borderRadius: 999, cursor: 'pointer',
+              border: AC.border ? `1px solid ${AC.border}` : 'none',
+              backgroundColor: AC.card || '#1a1a1a', color: AC.text || '#fff',
+              backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
+              boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+              transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+            }}
+          >
+            {nowTrack ? (
+              <>
+                {nowTrack.albumArt ? (
+                  <img src={nowTrack.albumArt} alt="" width={36} height={36} style={{ borderRadius: '50%', flexShrink: 0 }} />
+                ) : (
+                  <div style={{ width: 36, height: 36, borderRadius: '50%', backgroundColor: SPOTIFY_GREEN, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <Music size={16} color="#000" />
+                  </div>
+                )}
+                <div style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 12, fontWeight: 600 }}>
+                  {nowTrack.name}
+                </div>
+              </>
+            ) : (
+              <Music size={20} />
+            )}
+          </button>
+        );
+      })()}
 
       {/* Backdrop */}
       <div
