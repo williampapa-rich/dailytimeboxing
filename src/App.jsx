@@ -420,11 +420,13 @@ export default function App() {
   useEffect(() => {
     if (!boxDrag) return;
     const dur = boxDrag.origEnd - boxDrag.origStart;
-    const minPerPx = MIN_PER_SLOT / SLOT_HEIGHT;
+    const pxPerMin = SLOT_HEIGHT / MIN_PER_SLOT;
     const onMove = (e) => {
       const dy = e.clientY - boxDrag.startY;
-      const rawOffset = Math.round(dy * minPerPx);
-      const offset = rawOffset;
+      const snapUnit = dur;
+      const rawMinOffset = dy / pxPerMin;
+      const snapped = Math.round(rawMinOffset / snapUnit) * snapUnit;
+      const offset = snapped;
       const newStart = boxDrag.origStart + offset;
       const newEnd = boxDrag.origEnd + offset;
       const inBounds = newStart >= 0 && newEnd <= MINUTES_PER_DAY;
