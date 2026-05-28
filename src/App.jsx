@@ -869,7 +869,7 @@ export default function App() {
         {isFullscreen ? <Minimize size={16} /> : <Maximize size={16} />}
       </button>
 
-      <div style={{ flex: 1, minHeight: 0, maxWidth: 1032, margin: '0 auto', padding: '16px 24px', width: '100%', position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', justifyContent: mode === 'view' ? 'center' : 'stretch', transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)' }}>
+      <div style={{ flex: 1, minHeight: 0, maxWidth: 1032, margin: '0 auto', padding: window.matchMedia?.('(max-width: 768px)')?.matches ? '8px 16px' : '16px 24px', width: '100%', position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', justifyContent: mode === 'view' ? 'center' : 'stretch', transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)' }}>
         {loading ? (
           <div style={{ textAlign: 'center', color: C.textMid, padding: '80px 0' }}>{t.loading}</div>
         ) : mode === 'edit' ? (
@@ -1556,8 +1556,8 @@ function ViewMode({ t, C, viewRef, boxes, sw, tw, onScroll, toggleTaskInBox, isV
         .dtb-urgent { animation: dtb-urgent-pulse 1s ease-in-out infinite; }
       `}</style>
       {/* Pomodoro timer */}
-      <div style={{ padding: '40px 24px 40px', textAlign: 'center', minHeight: 280 }}>
-        <div style={{ fontSize: 12, color: C.textMid, fontWeight: 600, marginBottom: 20 }}>
+      <div style={{ padding: window.matchMedia?.('(max-width: 768px)')?.matches ? '20px 16px 32px' : '40px 24px 40px', textAlign: 'center', minHeight: 280 }}>
+        <div style={{ fontSize: 12, color: C.textMid, fontWeight: 600, marginBottom: window.matchMedia?.('(max-width: 768px)')?.matches ? 12 : 20 }}>
           {formatDate(selectedDate, t)}
         </div>
         {timer.type === 'current' && (
