@@ -27,6 +27,14 @@
   </head>
   <body>
     <div id="root"></div>
+    <script src="https://t1.kakaocdn.net/kakao_js_sdk/2.7.2/kakao.min.js"
+            integrity="sha384-TiCUE00h649CAMonG018J2ujOgDKW/kVWlChEuu4jK2vxfAAD0eZxzCKakxg55G4"
+            crossorigin="anonymous"></script>
+    <script>
+      if (window.Kakao && !window.Kakao.isInitialized()) {
+        window.Kakao.init('a4fd7bb35a872ec166f5082abce98c03');
+      }
+    </script>
     <script type="module" src="/src/main.jsx"></script>
     <script data-goatcounter="https://timebox.goatcounter.com/count"
             async src="//gc.zgo.at/count.js"></script>

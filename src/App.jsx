@@ -1024,10 +1024,26 @@ export default function App() {
           <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 16, textAlign: 'center' }}>{t.share}</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {/* Kakao */}
-            <button onClick={() => alert(t.comingSoon)} style={{
+            <button onClick={() => {
+              if (window.Kakao?.Share) {
+                window.Kakao.Share.sendDefault({
+                  objectType: 'feed',
+                  content: {
+                    title: 'TimeBox',
+                    description: t.shareMessage.split('\n')[0],
+                    imageUrl: 'https://timebox.im/og-image.jpg',
+                    link: { mobileWebUrl: 'https://timebox.im', webUrl: 'https://timebox.im' },
+                  },
+                  buttons: [{ title: t.share, link: { mobileWebUrl: 'https://timebox.im', webUrl: 'https://timebox.im' } }],
+                });
+                setShareModalOpen(false);
+              } else {
+                alert(t.comingSoon);
+              }
+            }} style={{
               display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', borderRadius: 10,
-              border: `1px solid ${C.border}`, backgroundColor: C.hover, color: C.text,
-              cursor: 'pointer', fontSize: 14, fontWeight: 500, transition: 'all 0.15s',
+              border: `1px solid ${C.border}`, backgroundColor: '#FEE500', color: '#000',
+              cursor: 'pointer', fontSize: 14, fontWeight: 600, transition: 'all 0.15s',
             }}>
               <span style={{ fontSize: 20 }}>💬</span>
               KakaoTalk
