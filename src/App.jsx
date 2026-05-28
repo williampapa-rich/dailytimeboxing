@@ -1031,7 +1031,7 @@ export default function App() {
                   content: {
                     title: 'TimeBox',
                     description: t.shareMessage.split('\n')[0],
-                    imageUrl: 'https://timebox.im/og-image.jpg',
+                    imageUrl: 'https://timebox.im/og-image.jpg?v=2',
                     link: { mobileWebUrl: 'https://timebox.im', webUrl: 'https://timebox.im' },
                   },
                   buttons: [{ title: t.share, link: { mobileWebUrl: 'https://timebox.im', webUrl: 'https://timebox.im' } }],
