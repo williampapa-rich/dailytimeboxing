@@ -366,21 +366,46 @@ export default function App() {
     return totalOther + dur <= MIN_PER_SLOT;
   };
 
-  const fitBoxAmongOthers = (newStart, newEnd, dragId) => {
+  const trySwapOrFit = (newStart, newEnd, dragId) => {
     const dur = newEnd - newStart;
-    const others = boxes.filter(b => b.id !== dragId).sort((a, b) => a.start - b.start);
-    const overlapping = others.filter(b => !(newEnd <= b.start || newStart >= b.end));
-    if (overlapping.length === 0) return { start: newStart, end: newEnd };
+    const original = boxes.find(b => b.id === dragId);
+    if (!original) return null;
+    const overlapping = boxes.filter(b => b.id !== dragId && !(newEnd <= b.start || newStart >= b.end));
+    if (overlapping.length === 0) return { type: 'move', start: newStart, end: newEnd };
+
+    // Try swap with single overlapping box
+    if (overlapping.length === 1) {
+      const other = overlapping[0];
+      const otherDur = other.end - other.start;
+      // Swap: dragged box takes other's position, other takes dragged's original position
+      const swappedOther = { start: original.start, end: original.start + otherDur };
+      const swappedDrag = { start: other.start, end: other.start + dur };
+      // Check neither goes out of day bounds
+      if (swappedOther.end <= MINUTES_PER_DAY && swappedDrag.end <= MINUTES_PER_DAY) {
+        // Check no conflict with remaining boxes
+        const rest = boxes.filter(b => b.id !== dragId && b.id !== other.id);
+        const dragConflict = rest.some(b => !(swappedDrag.end <= b.start || swappedDrag.start >= b.end));
+        const otherConflict = rest.some(b => !(swappedOther.end <= b.start || swappedOther.start >= b.end));
+        if (!dragConflict && !otherConflict) {
+          return { type: 'swap', dragStart: swappedDrag.start, dragEnd: swappedDrag.end, otherId: other.id, otherStart: swappedOther.start, otherEnd: swappedOther.end };
+        }
+      }
+    }
+
+    // Try fit after last overlapping box
     const afterLast = Math.max(...overlapping.map(b => b.end));
-    if (afterLast + dur <= Math.ceil(newEnd / MIN_PER_SLOT) * MIN_PER_SLOT) {
-      const candidate = { start: afterLast, end: afterLast + dur };
-      if (!others.some(b => b.id !== dragId && !(candidate.end <= b.start || candidate.start >= b.end))) return candidate;
+    const candidateAfter = { start: afterLast, end: afterLast + dur };
+    if (candidateAfter.end <= MINUTES_PER_DAY && !boxes.some(b => b.id !== dragId && !(candidateAfter.end <= b.start || candidateAfter.start >= b.end))) {
+      return { type: 'move', start: candidateAfter.start, end: candidateAfter.end };
     }
+
+    // Try fit before first overlapping box
     const beforeFirst = Math.min(...overlapping.map(b => b.start));
-    if (beforeFirst - dur >= Math.floor(newStart / MIN_PER_SLOT) * MIN_PER_SLOT) {
-      const candidate = { start: beforeFirst - dur, end: beforeFirst };
-      if (!others.some(b => b.id !== dragId && !(candidate.end <= b.start || candidate.start >= b.end))) return candidate;
+    const candidateBefore = { start: beforeFirst - dur, end: beforeFirst };
+    if (candidateBefore.start >= 0 && !boxes.some(b => b.id !== dragId && !(candidateBefore.end <= b.start || candidateBefore.start >= b.end))) {
+      return { type: 'move', start: candidateBefore.start, end: candidateBefore.end };
     }
+
     return null;
   };
 
@@ -396,7 +421,7 @@ export default function App() {
       const hasOverlap = inBounds && boxes.some(b =>
         b.id !== boxDrag.id && !(newEnd <= b.start || newStart >= b.end)
       );
-      const conflict = hasOverlap && !canFitInSlot(newStart, newEnd, boxDrag.id);
+      const conflict = hasOverlap && !canFitInSlot(newStart, newEnd, boxDrag.id) && !trySwapOrFit(newStart, newEnd, boxDrag.id);
       setBoxDrag(prev => prev && ({
         ...prev,
         offset: inBounds ? offset : prev.offset,
@@ -413,15 +438,16 @@ export default function App() {
         } else if (prev.offset !== 0 && original) {
           const newStart = prev.origStart + prev.offset;
           const newEnd = prev.origEnd + prev.offset;
-          const hasOverlap = boxes.some(b =>
-            b.id !== prev.id && !(newEnd <= b.start || newStart >= b.end)
-          );
-          if (!hasOverlap) {
-            save(boxes.map(b => b.id === prev.id ? { ...original, start: newStart, end: newEnd } : b));
-          } else {
-            const fitted = fitBoxAmongOthers(newStart, newEnd, prev.id);
-            if (fitted) {
-              save(boxes.map(b => b.id === prev.id ? { ...original, start: fitted.start, end: fitted.end } : b));
+          const result = trySwapOrFit(newStart, newEnd, prev.id);
+          if (result) {
+            if (result.type === 'swap') {
+              save(boxes.map(b => {
+                if (b.id === prev.id) return { ...original, start: result.dragStart, end: result.dragEnd };
+                if (b.id === result.otherId) return { ...b, start: result.otherStart, end: result.otherEnd };
+                return b;
+              }));
+            } else {
+              save(boxes.map(b => b.id === prev.id ? { ...original, start: result.start, end: result.end } : b));
             }
           }
         }
@@ -1183,14 +1209,16 @@ function EditView({
                     color: txt,
                     borderRadius: 6,
                     padding: '8px 12px',
-                    boxShadow: dragging ? '0 6px 16px rgba(0,0,0,0.22)' : '0 1px 2px rgba(0,0,0,0.12)',
+                    boxShadow: dragging ? '0 8px 24px rgba(0,0,0,0.3)' : '0 1px 2px rgba(0,0,0,0.12)',
                     cursor: dragging ? 'grabbing' : 'grab',
                     overflow: 'hidden',
                     zIndex: dragging ? 20 : 10,
-                    opacity: dragging ? 0.92 : 1,
+                    opacity: dragging ? 0.95 : 1,
+                    transform: dragging ? 'scale(1.05)' : 'scale(1)',
+                    transformOrigin: 'center',
                     outline: conflict ? `2px solid ${C.indicator}` : (isEditing ? `2px solid ${C.text}` : 'none'),
                     outlineOffset: (conflict || isEditing) ? 2 : 0,
-                    transition: dragging ? 'none' : 'box-shadow 0.15s, top 0.1s'
+                    transition: dragging ? 'none' : 'box-shadow 0.15s, top 0.1s, transform 0.15s'
                   }}
                 >
                   <div className="dtb-tnum" style={{ fontSize: 10, opacity: 0.9, fontWeight: 500 }}>
