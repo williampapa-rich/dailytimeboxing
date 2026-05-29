@@ -61,7 +61,7 @@ function CustomBgUploader({ C, t, isLoggedIn, customBg, onUploadBg, onClearBg, o
       ) : (
         <div>
           {customBg && (
-            <div style={{ width: '100%', height: 100, borderRadius: 10, backgroundImage: `url(${customBg})`, backgroundSize: 'cover', backgroundPosition: 'center', marginBottom: 12, border: `1px solid ${C.border}` }} />
+            <div style={{ width: '100%', height: 100, borderRadius: 10, backgroundImage: `url(${customBg})`, backgroundSize: 'contain', backgroundPosition: 'center', backgroundRepeat: 'no-repeat', backgroundColor: C.hover, marginBottom: 12, border: `1px solid ${C.border}` }} />
           )}
           <div style={{ display: 'flex', gap: 8 }}>
             <button onClick={pick} disabled={uploading} style={{ padding: '9px 16px', borderRadius: 8, border: `1px solid ${C.borderStrong}`, backgroundColor: C.accent, color: '#fff', cursor: uploading ? 'default' : 'pointer', fontSize: 13, fontWeight: 600, opacity: uploading ? 0.6 : 1 }}>{uploading ? t.bgUploading : (customBg ? t.bgChange : t.bgUpload)}</button>
