@@ -120,12 +120,13 @@ function analyzePalette(ctx, width, height) {
   const { data } = ctx.getImageData(0, 0, width, height);
   const step = Math.max(1, Math.floor((width * height) / 20000)) * 4; // 약 2만개 샘플
   let lumSum = 0, n = 0;
+  let rSum = 0, gSum = 0, bSum = 0; // 틴팅용 평균색
   let best = { r: 217, g: 119, b: 87 }, bestScore = -1; // 기본 accent 폴백
   for (let i = 0; i < data.length; i += step) {
     const r = data[i], g = data[i + 1], b = data[i + 2], a = data[i + 3];
     if (a < 128) continue;
     const lum = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
-    lumSum += lum; n++;
+    lumSum += lum; rSum += r; gSum += g; bSum += b; n++;
     // 채도가 높고 너무 어둡지/밝지 않은 색을 accent 후보로 선호
     const max = Math.max(r, g, b), min = Math.min(r, g, b);
     const sat = max === 0 ? 0 : (max - min) / max;
@@ -136,10 +137,12 @@ function analyzePalette(ctx, width, height) {
   const avgLum = n ? lumSum / n : 0.5;
   const toHex = (c) => c.toString(16).padStart(2, '0');
   const accent = `#${toHex(best.r)}${toHex(best.g)}${toHex(best.b)}`;
-  return { avgLum, accent };
+  const tint = n ? { r: Math.round(rSum / n), g: Math.round(gSum / n), b: Math.round(bSum / n) } : { r: 128, g: 128, b: 128 };
+  return { avgLum, accent, tint };
 }
 
-// 대표색/밝기로부터 앱 전체 색상 세트(THEMES와 동일 구조) 생성
+// 대표색/밝기로부터 앱 전체 색상 세트(THEMES와 동일 구조) 생성.
+// 표면색(카드/박스/버튼 배경 등)에 사진 대표색을 은은하게(~13%) 틴팅한다.
 export function buildCustomColors(palette) {
   const dark = palette.avgLum < 0.5;
   const base = dark ? {
@@ -155,8 +158,30 @@ export function buildCustomColors(palette) {
     hover: 'rgba(235,233,224,0.6)', indicator: '#EF4444', indicatorSoft: 'rgba(239,68,68,0.18)',
     slotBg: 'rgba(235, 233, 224, 0.3)', inputBg: 'rgba(255,255,255,0.72)', inputBorder: '#D6D3CA', scheme: 'light',
   };
+  const tint = palette.tint || { r: 128, g: 128, b: 128 };
+  const AMT = 0.13;
+  // 표면 색만 틴팅(글씨/지표색은 가독성 위해 유지)
+  const surfaces = ['bg', 'card', 'cardAlt', 'border', 'borderStrong', 'hover', 'slotBg', 'inputBg', 'inputBorder'];
+  const tinted = { ...base };
+  for (const k of surfaces) tinted[k] = tintColor(base[k], tint, AMT);
   const accent = palette.accent;
-  return { ...base, accent, accentHover: shade(accent, dark ? 0.12 : -0.1), accentActive: shade(accent, dark ? 0.24 : -0.2) };
+  return { ...tinted, accent, accentHover: shade(accent, dark ? 0.12 : -0.1), accentActive: shade(accent, dark ? 0.24 : -0.2) };
+}
+
+// rgba(...) 또는 #hex 색의 RGB를 tint쪽으로 amt만큼 섞음(알파는 보존)
+function tintColor(color, tint, amt) {
+  if (color.startsWith('#')) {
+    const m = color.replace('#', '');
+    const r = parseInt(m.slice(0, 2), 16), g = parseInt(m.slice(2, 4), 16), b = parseInt(m.slice(4, 6), 16);
+    const toHex = (c) => Math.max(0, Math.min(255, Math.round(c))).toString(16).padStart(2, '0');
+    return `#${toHex(r * (1 - amt) + tint.r * amt)}${toHex(g * (1 - amt) + tint.g * amt)}${toHex(b * (1 - amt) + tint.b * amt)}`;
+  }
+  const m = color.match(/rgba?\((\d+),\s*(\d+),\s*(\d+),?\s*([\d.]*)\)/);
+  if (!m) return color;
+  const r = Math.round(+m[1] * (1 - amt) + tint.r * amt);
+  const g = Math.round(+m[2] * (1 - amt) + tint.g * amt);
+  const b = Math.round(+m[3] * (1 - amt) + tint.b * amt);
+  return m[4] ? `rgba(${r},${g},${b},${m[4]})` : `rgb(${r},${g},${b})`;
 }
 
 // hex 색을 amt(-1~1)만큼 밝게(+)/어둡게(-)
