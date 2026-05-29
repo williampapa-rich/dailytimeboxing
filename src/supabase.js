@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { Vibrant } from 'node-vibrant/browser';
 
 const SUPABASE_URL = 'https://pwmxmldpyuruiyabxjyb.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_J4XrqXXPefgfMCCCxjxCIQ_HWDdB02f';
@@ -83,10 +84,9 @@ export async function getMemberUser() {
   return user;
 }
 
-// 이미지를 캔버스로 리사이즈/압축하고, 같은 캔버스에서 색상 분석까지 수행.
-// { blob, palette } 반환. palette = { avgLum(0~1), accent: '#rrggbb' }
+// 이미지를 캔버스로 리사이즈/압축. { blob, dataUrl } 반환(dataUrl은 색 분석용 압축본).
 async function compressImage(file, maxDim = 1920, quality = 0.82) {
-  const dataUrl = await new Promise((resolve, reject) => {
+  const srcUrl = await new Promise((resolve, reject) => {
     const r = new FileReader();
     r.onload = () => resolve(r.result);
     r.onerror = reject;
@@ -96,7 +96,7 @@ async function compressImage(file, maxDim = 1920, quality = 0.82) {
     const im = new Image();
     im.onload = () => resolve(im);
     im.onerror = reject;
-    im.src = dataUrl;
+    im.src = srcUrl;
   });
   let { width, height } = img;
   if (width > maxDim || height > maxDim) {
@@ -107,42 +107,42 @@ async function compressImage(file, maxDim = 1920, quality = 0.82) {
   const canvas = document.createElement('canvas');
   canvas.width = width;
   canvas.height = height;
-  const ctx = canvas.getContext('2d');
-  ctx.drawImage(img, 0, 0, width, height);
-  const palette = analyzePalette(ctx, width, height);
+  canvas.getContext('2d').drawImage(img, 0, 0, width, height);
   const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/webp', quality));
   if (!blob) throw new Error('이미지 압축에 실패했습니다');
-  return { blob, palette };
+  const dataUrl = canvas.toDataURL('image/png');
+  return { blob, dataUrl };
 }
 
-// 캔버스 픽셀을 샘플링해 평균 밝기와 대표(채도 높은) 색을 구함
-function analyzePalette(ctx, width, height) {
-  const { data } = ctx.getImageData(0, 0, width, height);
-  const step = Math.max(1, Math.floor((width * height) / 20000)) * 4; // 약 2만개 샘플
-  let lumSum = 0, n = 0;
-  let rSum = 0, gSum = 0, bSum = 0; // 틴팅용 평균색
-  let best = { r: 217, g: 119, b: 87 }, bestScore = -1; // 기본 accent 폴백
-  for (let i = 0; i < data.length; i += step) {
-    const r = data[i], g = data[i + 1], b = data[i + 2], a = data[i + 3];
-    if (a < 128) continue;
-    const lum = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
-    lumSum += lum; rSum += r; gSum += g; bSum += b; n++;
-    // 채도가 높고 너무 어둡지/밝지 않은 색을 accent 후보로 선호
-    const max = Math.max(r, g, b), min = Math.min(r, g, b);
-    const sat = max === 0 ? 0 : (max - min) / max;
-    const midness = 1 - Math.abs(lum - 0.5) * 2; // 중간 밝기일수록 1
-    const score = sat * 0.7 + midness * 0.3;
-    if (score > bestScore) { bestScore = score; best = { r, g, b }; }
+// Vibrant.js로 이미지 팔레트 분석. { avgLum, accent, tint } 반환.
+async function analyzePalette(dataUrl) {
+  const FALLBACK = { avgLum: 0.5, accent: '#D97757', tint: { r: 128, g: 128, b: 128 } };
+  try {
+    const palette = await Vibrant.from(dataUrl).getPalette();
+    // accent: 채도 높은 Vibrant 계열 우선
+    const accentSw = palette.Vibrant || palette.LightVibrant || palette.DarkVibrant || palette.Muted;
+    // tint(표면 틴팅): 차분한 Muted 계열 우선
+    const tintSw = palette.Muted || palette.DarkMuted || palette.LightMuted || accentSw;
+    if (!accentSw) return FALLBACK;
+    // 전체 밝기: 인구수(population) 가중 평균
+    let lumSum = 0, popSum = 0;
+    for (const sw of Object.values(palette)) {
+      if (!sw) continue;
+      const [r, g, b] = sw.rgb;
+      const lum = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
+      lumSum += lum * sw.population; popSum += sw.population;
+    }
+    const avgLum = popSum ? lumSum / popSum : 0.5;
+    const [tr, tg, tb] = (tintSw || accentSw).rgb;
+    return { avgLum, accent: accentSw.hex, tint: { r: Math.round(tr), g: Math.round(tg), b: Math.round(tb) } };
+  } catch (e) {
+    console.warn('[custom-bg] 팔레트 분석 실패, 폴백 사용', e);
+    return FALLBACK;
   }
-  const avgLum = n ? lumSum / n : 0.5;
-  const toHex = (c) => c.toString(16).padStart(2, '0');
-  const accent = `#${toHex(best.r)}${toHex(best.g)}${toHex(best.b)}`;
-  const tint = n ? { r: Math.round(rSum / n), g: Math.round(gSum / n), b: Math.round(bSum / n) } : { r: 128, g: 128, b: 128 };
-  return { avgLum, accent, tint };
 }
 
 // 대표색/밝기로부터 앱 전체 색상 세트(THEMES와 동일 구조) 생성.
-// 표면색(카드/박스/버튼 배경 등)에 사진 대표색을 은은하게(~13%) 틴팅한다.
+// 표면색(카드/박스/버튼 배경 등)에 사진 대표색을 틴팅한다.
 export function buildCustomColors(palette) {
   const dark = palette.avgLum < 0.5;
   const base = dark ? {
@@ -158,10 +158,8 @@ export function buildCustomColors(palette) {
     hover: 'rgba(235,233,224,0.6)', indicator: '#EF4444', indicatorSoft: 'rgba(239,68,68,0.18)',
     slotBg: 'rgba(235, 233, 224, 0.3)', inputBg: 'rgba(255,255,255,0.72)', inputBorder: '#D6D3CA', scheme: 'light',
   };
-  // 평균색은 채도가 죽어 칙칙하므로 accent(채도 있는 대표색)와 섞어 색감을 살림
-  const avg = palette.tint || { r: 128, g: 128, b: 128 };
-  const acc = hexToRgb(palette.accent);
-  const tint = { r: Math.round(avg.r * 0.5 + acc.r * 0.5), g: Math.round(avg.g * 0.5 + acc.g * 0.5), b: Math.round(avg.b * 0.5 + acc.b * 0.5) };
+  // Vibrant가 뽑은 Muted 계열(차분한 대표색)을 틴팅색으로 사용
+  const tint = palette.tint || { r: 128, g: 128, b: 128 };
   // 표면별 틴팅 강도(글씨/지표색은 가독성 위해 제외).
   // 카드/박스 등 좁은 표면은 또렷하게, 전체 뒷배경(bg)은 사진이 이미 보이므로 약하게.
   const amts = { bg: 0.12, card: 0.26, cardAlt: 0.26, border: 0.3, borderStrong: 0.3, hover: 0.3, slotBg: 0.3, inputBg: 0.26, inputBorder: 0.3 };
@@ -187,11 +185,6 @@ function tintColor(color, tint, amt) {
   return m[4] ? `rgba(${r},${g},${b},${m[4]})` : `rgb(${r},${g},${b})`;
 }
 
-function hexToRgb(hex) {
-  const m = (hex || '#808080').replace('#', '');
-  return { r: parseInt(m.slice(0, 2), 16), g: parseInt(m.slice(2, 4), 16), b: parseInt(m.slice(4, 6), 16) };
-}
-
 // hex 색을 amt(-1~1)만큼 밝게(+)/어둡게(-)
 function shade(hex, amt) {
   const m = hex.replace('#', '');
@@ -212,7 +205,8 @@ export async function uploadCustomBg(file) {
   if (!file.type.startsWith('image/')) throw new Error('이미지 파일만 업로드할 수 있습니다');
   if (file.size > 20 * 1024 * 1024) throw new Error('20MB 이하 이미지만 업로드할 수 있습니다');
 
-  const { blob, palette } = await compressImage(file);
+  const { blob, dataUrl } = await compressImage(file);
+  const palette = await analyzePalette(dataUrl);
   const path = bgPath(user.id);
   const { error } = await supabase.storage
     .from(CUSTOM_BG_BUCKET)
