@@ -26,7 +26,58 @@ function useMobile() {
   return mobile;
 }
 
-function SectionContent({ section, C, t, lang, setLang, themeId, onChangeTheme, opacity, onChangeOpacity, isLoggedIn, avatarUrl, displayName, email, onGoogleSignIn, onLogout, busy }) {
+function CustomBgUploader({ C, t, isLoggedIn, customBg, onUploadBg, onClearBg, onGoogleSignIn }) {
+  const inputRef = useRef(null);
+  const [uploading, setUploading] = useState(false);
+  const [err, setErr] = useState('');
+
+  const pick = () => { setErr(''); inputRef.current?.click(); };
+  const onFile = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    setUploading(true); setErr('');
+    try { await onUploadBg(file); }
+    catch (ex) { setErr(ex?.message || t.bgUploadFailed); }
+    finally { setUploading(false); }
+  };
+  const clear = async () => {
+    setUploading(true); setErr('');
+    try { await onClearBg(); }
+    catch (ex) { setErr(ex?.message || t.bgUploadFailed); }
+    finally { setUploading(false); }
+  };
+
+  return (
+    <div style={{ marginTop: 28, paddingTop: 20, borderTop: `1px solid ${C.border}` }}>
+      <div style={{ fontSize: 13, fontWeight: 600, color: C.text, marginBottom: 4 }}>{t.customBgTitle}</div>
+      <div style={{ fontSize: 11, color: C.textMid, marginBottom: 12, lineHeight: 1.5 }}>{t.customBgDesc}</div>
+
+      {!isLoggedIn ? (
+        <div style={{ padding: '16px', borderRadius: 10, backgroundColor: C.hover, textAlign: 'center' }}>
+          <div style={{ fontSize: 12, color: C.textMid, marginBottom: 12 }}>{t.customBgMembersOnly}</div>
+          <button onClick={onGoogleSignIn} style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '8px 16px', borderRadius: 8, backgroundColor: '#fff', color: '#333', border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: 12 }}><GoogleIcon size={14} />{t.startWithGoogle}</button>
+        </div>
+      ) : (
+        <div>
+          {customBg && (
+            <div style={{ width: '100%', height: 100, borderRadius: 10, backgroundImage: `url(${customBg})`, backgroundSize: 'cover', backgroundPosition: 'center', marginBottom: 12, border: `1px solid ${C.border}` }} />
+          )}
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button onClick={pick} disabled={uploading} style={{ padding: '9px 16px', borderRadius: 8, border: `1px solid ${C.borderStrong}`, backgroundColor: C.accent, color: '#fff', cursor: uploading ? 'default' : 'pointer', fontSize: 13, fontWeight: 600, opacity: uploading ? 0.6 : 1 }}>{uploading ? t.bgUploading : (customBg ? t.bgChange : t.bgUpload)}</button>
+            {customBg && (
+              <button onClick={clear} disabled={uploading} style={{ padding: '9px 16px', borderRadius: 8, border: `1px solid ${C.borderStrong}`, backgroundColor: 'transparent', color: C.text, cursor: uploading ? 'default' : 'pointer', fontSize: 13, fontWeight: 500, opacity: uploading ? 0.6 : 1 }}>{t.bgRemove}</button>
+            )}
+          </div>
+          {err && <div style={{ fontSize: 11, color: C.indicator, marginTop: 8 }}>{err}</div>}
+          <input ref={inputRef} type="file" accept="image/*" onChange={onFile} style={{ display: 'none' }} />
+        </div>
+      )}
+    </div>
+  );
+}
+
+function SectionContent({ section, C, t, lang, setLang, themeId, onChangeTheme, opacity, onChangeOpacity, isLoggedIn, avatarUrl, displayName, email, onGoogleSignIn, onLogout, busy, customBg, onUploadBg, onClearBg }) {
   if (section === 'account') return (
     <div>
       <h2 style={{ fontSize: 18, fontWeight: 700, margin: '0 0 20px', color: C.text }}>{t.account}</h2>
@@ -71,6 +122,7 @@ function SectionContent({ section, C, t, lang, setLang, themeId, onChangeTheme, 
         <input type="range" min={10} max={100} step={5} value={Math.round(opacity * 100)} onChange={(e) => onChangeOpacity(parseInt(e.target.value, 10) / 100)} style={{ width: '100%', accentColor: C.accent, cursor: 'pointer' }} />
         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: C.textDim, marginTop: 4 }}><span>{t.transparent}</span><span>{t.opaque}</span></div>
       </div>
+      <CustomBgUploader C={C} t={t} isLoggedIn={isLoggedIn} customBg={customBg} onUploadBg={onUploadBg} onClearBg={onClearBg} onGoogleSignIn={onGoogleSignIn} />
     </div>
   );
   if (section === 'clock') return (<div><h2 style={{ fontSize: 18, fontWeight: 700, margin: '0 0 20px', color: C.text }}>{t.clock}</h2><p style={{ color: C.textMid, fontSize: 13 }}>{t.comingSoon}</p></div>);
@@ -99,7 +151,7 @@ function SectionContent({ section, C, t, lang, setLang, themeId, onChangeTheme, 
   return null;
 }
 
-export default function SettingsPanel({ isOpen, onClose, themeId, onChangeTheme, opacity, onChangeOpacity, C }) {
+export default function SettingsPanel({ isOpen, onClose, themeId, onChangeTheme, opacity, onChangeOpacity, C, customBg, onUploadBg, onClearBg }) {
   const { t, lang, setLang } = useI18n();
   const mobile = useMobile();
   const MENU = [
@@ -129,7 +181,7 @@ export default function SettingsPanel({ isOpen, onClose, themeId, onChangeTheme,
   const onGoogleSignIn = async () => { setBusy(true); try { await signInWithGoogle(); } catch (e) { console.error(e); } finally { setBusy(false); } };
   const onLogout = async () => { setBusy(true); try { await signOut(); window.location.reload(); } finally { setBusy(false); } };
 
-  const sectionProps = { C, t, lang, setLang, themeId, onChangeTheme, opacity, onChangeOpacity, isLoggedIn, avatarUrl, displayName, email, onGoogleSignIn, onLogout, busy };
+  const sectionProps = { C, t, lang, setLang, themeId, onChangeTheme, opacity, onChangeOpacity, isLoggedIn, avatarUrl, displayName, email, onGoogleSignIn, onLogout, busy, customBg, onUploadBg, onClearBg };
 
   // Mobile: full-screen drill-down
   if (mobile) {

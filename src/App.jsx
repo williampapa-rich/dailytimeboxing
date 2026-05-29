@@ -6,6 +6,8 @@ import { THEMES, DEFAULT_THEME } from './themes.js';
 import MusicPlayer from "./MusicPlayer.jsx";
 import { useI18n } from './i18n.js';
 import Tutorial from './Tutorial.jsx';
+import { uploadCustomBg, removeCustomBg } from './supabase.js';
+import { useAuthUser } from './auth.js';
 
 const SLOTS_PER_DAY = 48;
 const VISIBLE_SLOTS = 4;
@@ -128,7 +130,9 @@ const getTimerInfo = (boxes) => {
 
 export default function App() {
   const [mode, setMode] = useState('view');
+  const { isAnonymous, loaded: authLoaded } = useAuthUser();
   const [themeId, setThemeId] = useState(DEFAULT_THEME);
+  const [customBg, setCustomBg] = useState(null);
   const [opacity, setOpacity] = useState(0.8);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [fabOpen, setFabOpen] = useState(false);
@@ -236,6 +240,8 @@ export default function App() {
         if (t?.value && THEMES[t.value]) setThemeId(t.value);
         const o = await window.storage.get('dtb-opacity');
         if (o?.value) { const v = parseFloat(o.value); if (v >= 0.1 && v <= 1) setOpacity(v); }
+        const bg = await window.storage.get('dtb-custom-bg');
+        if (bg?.value) setCustomBg(bg.value);
       } catch (e) {}
       setLoading(false);
     })();
@@ -259,6 +265,17 @@ export default function App() {
     if (!THEMES[id]) return;
     setThemeId(id);
     try { await window.storage.set('dtb-theme', id); } catch (e) {}
+  };
+
+  const uploadBg = async (file) => {
+    const url = await uploadCustomBg(file);
+    setCustomBg(url);
+    return url;
+  };
+
+  const clearBg = async () => {
+    await removeCustomBg();
+    setCustomBg(null);
   };
 
   const changeOpacity = async (val) => {
@@ -692,7 +709,7 @@ export default function App() {
       {/* Background image */}
       <div style={{
         position: 'fixed', inset: 0, zIndex: 0,
-        backgroundImage: `url(${currentTheme.bgImage})`,
+        backgroundImage: `url(${customBg || currentTheme.bgImage})`,
         backgroundSize: 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat',
         pointerEvents: 'none',
       }} />
@@ -1082,7 +1099,7 @@ export default function App() {
         </div>
       </div>
 
-      <SettingsPanel isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} themeId={themeId} onChangeTheme={changeTheme} opacity={opacity} onChangeOpacity={changeOpacity} C={C} />
+      <SettingsPanel isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} themeId={themeId} onChangeTheme={changeTheme} opacity={opacity} onChangeOpacity={changeOpacity} C={C} customBg={customBg} onUploadBg={uploadBg} onClearBg={clearBg} isAnonymous={isAnonymous} authLoaded={authLoaded} />
       <Tutorial isOpen={tutorialOpen} onClose={() => setTutorialOpen(false)} C={C} mode={mode} setMode={setMode} setFabOpen={setFabOpen} />
     </div>
   );

@@ -74,6 +74,81 @@ async function userIdSync() {
   return cachedUserId;
 }
 
+const CUSTOM_BG_BUCKET = 'custom-bg';
+
+// 회원(비익명)인지 확인. 익명 로그인 유저는 false.
+export async function getMemberUser() {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user || user.is_anonymous) return null;
+  return user;
+}
+
+// 이미지를 캔버스로 리사이즈/압축해 Blob 반환 (기본 1920px, WebP ~0.82품질)
+async function compressImage(file, maxDim = 1920, quality = 0.82) {
+  const dataUrl = await new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(r.result);
+    r.onerror = reject;
+    r.readAsDataURL(file);
+  });
+  const img = await new Promise((resolve, reject) => {
+    const im = new Image();
+    im.onload = () => resolve(im);
+    im.onerror = reject;
+    im.src = dataUrl;
+  });
+  let { width, height } = img;
+  if (width > maxDim || height > maxDim) {
+    const scale = maxDim / Math.max(width, height);
+    width = Math.round(width * scale);
+    height = Math.round(height * scale);
+  }
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+  canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+  const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/webp', quality));
+  if (!blob) throw new Error('이미지 압축에 실패했습니다');
+  return blob;
+}
+
+// 사용자당 1장: 항상 같은 경로로 덮어쓰기
+function bgPath(uid) {
+  return `${uid}/background.webp`;
+}
+
+export async function uploadCustomBg(file) {
+  const user = await getMemberUser();
+  if (!user) throw new Error('로그인한 회원만 사용할 수 있는 기능입니다');
+  if (!file.type.startsWith('image/')) throw new Error('이미지 파일만 업로드할 수 있습니다');
+  if (file.size > 20 * 1024 * 1024) throw new Error('20MB 이하 이미지만 업로드할 수 있습니다');
+
+  const blob = await compressImage(file);
+  const path = bgPath(user.id);
+  const { error } = await supabase.storage
+    .from(CUSTOM_BG_BUCKET)
+    .upload(path, blob, { contentType: 'image/webp', upsert: true });
+  if (error) throw error;
+
+  const url = getCustomBgUrl(user.id);
+  // 캐시 무력화용 버전 토큰을 prefs에 저장
+  const versioned = `${url}?v=${Date.now()}`;
+  await cloudStorage.set('dtb-custom-bg', versioned);
+  return versioned;
+}
+
+export function getCustomBgUrl(uid) {
+  const { data } = supabase.storage.from(CUSTOM_BG_BUCKET).getPublicUrl(bgPath(uid));
+  return data.publicUrl;
+}
+
+export async function removeCustomBg() {
+  const user = await getMemberUser();
+  if (!user) throw new Error('로그인한 회원만 사용할 수 있는 기능입니다');
+  await supabase.storage.from(CUSTOM_BG_BUCKET).remove([bgPath(user.id)]);
+  await cloudStorage.remove('dtb-custom-bg');
+}
+
 function localGet(key) {
   try { const v = localStorage.getItem('dtb:' + key); return v !== null ? { value: v } : null; } catch (e) { return null; }
 }
