@@ -83,7 +83,8 @@ export async function getMemberUser() {
   return user;
 }
 
-// 이미지를 캔버스로 리사이즈/압축해 Blob 반환 (기본 1920px, WebP ~0.82품질)
+// 이미지를 캔버스로 리사이즈/압축하고, 같은 캔버스에서 색상 분석까지 수행.
+// { blob, palette } 반환. palette = { avgLum(0~1), accent: '#rrggbb' }
 async function compressImage(file, maxDim = 1920, quality = 0.82) {
   const dataUrl = await new Promise((resolve, reject) => {
     const r = new FileReader();
@@ -106,10 +107,65 @@ async function compressImage(file, maxDim = 1920, quality = 0.82) {
   const canvas = document.createElement('canvas');
   canvas.width = width;
   canvas.height = height;
-  canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(img, 0, 0, width, height);
+  const palette = analyzePalette(ctx, width, height);
   const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/webp', quality));
   if (!blob) throw new Error('이미지 압축에 실패했습니다');
-  return blob;
+  return { blob, palette };
+}
+
+// 캔버스 픽셀을 샘플링해 평균 밝기와 대표(채도 높은) 색을 구함
+function analyzePalette(ctx, width, height) {
+  const { data } = ctx.getImageData(0, 0, width, height);
+  const step = Math.max(1, Math.floor((width * height) / 20000)) * 4; // 약 2만개 샘플
+  let lumSum = 0, n = 0;
+  let best = { r: 217, g: 119, b: 87 }, bestScore = -1; // 기본 accent 폴백
+  for (let i = 0; i < data.length; i += step) {
+    const r = data[i], g = data[i + 1], b = data[i + 2], a = data[i + 3];
+    if (a < 128) continue;
+    const lum = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
+    lumSum += lum; n++;
+    // 채도가 높고 너무 어둡지/밝지 않은 색을 accent 후보로 선호
+    const max = Math.max(r, g, b), min = Math.min(r, g, b);
+    const sat = max === 0 ? 0 : (max - min) / max;
+    const midness = 1 - Math.abs(lum - 0.5) * 2; // 중간 밝기일수록 1
+    const score = sat * 0.7 + midness * 0.3;
+    if (score > bestScore) { bestScore = score; best = { r, g, b }; }
+  }
+  const avgLum = n ? lumSum / n : 0.5;
+  const toHex = (c) => c.toString(16).padStart(2, '0');
+  const accent = `#${toHex(best.r)}${toHex(best.g)}${toHex(best.b)}`;
+  return { avgLum, accent };
+}
+
+// 대표색/밝기로부터 앱 전체 색상 세트(THEMES와 동일 구조) 생성
+export function buildCustomColors(palette) {
+  const dark = palette.avgLum < 0.5;
+  const base = dark ? {
+    bg: 'rgba(10,10,10,0.75)', card: 'rgba(30,28,25,0.85)', cardAlt: 'rgba(22,20,18,0.85)',
+    border: 'rgba(58,54,50,0.6)', borderStrong: '#524C44',
+    text: '#F5F4EE', textMid: '#A8A59B', textDim: '#6B6962',
+    hover: 'rgba(51,48,43,0.7)', indicator: '#F87171', indicatorSoft: 'rgba(248,113,113,0.22)',
+    slotBg: 'rgba(58, 54, 50, 0.35)', inputBg: 'rgba(22,20,18,0.85)', inputBorder: '#524C44', scheme: 'dark',
+  } : {
+    bg: 'rgba(245,244,238,0.6)', card: 'rgba(255,255,255,0.72)', cardAlt: 'rgba(250,249,245,0.72)',
+    border: 'rgba(229,227,218,0.6)', borderStrong: '#D6D3CA',
+    text: '#1F1E1D', textMid: '#4A4640', textDim: '#6B6962',
+    hover: 'rgba(235,233,224,0.6)', indicator: '#EF4444', indicatorSoft: 'rgba(239,68,68,0.18)',
+    slotBg: 'rgba(235, 233, 224, 0.3)', inputBg: 'rgba(255,255,255,0.72)', inputBorder: '#D6D3CA', scheme: 'light',
+  };
+  const accent = palette.accent;
+  return { ...base, accent, accentHover: shade(accent, dark ? 0.12 : -0.1), accentActive: shade(accent, dark ? 0.24 : -0.2) };
+}
+
+// hex 색을 amt(-1~1)만큼 밝게(+)/어둡게(-)
+function shade(hex, amt) {
+  const m = hex.replace('#', '');
+  let r = parseInt(m.slice(0, 2), 16), g = parseInt(m.slice(2, 4), 16), b = parseInt(m.slice(4, 6), 16);
+  const adj = (c) => Math.max(0, Math.min(255, Math.round(amt < 0 ? c * (1 + amt) : c + (255 - c) * amt)));
+  const toHex = (c) => c.toString(16).padStart(2, '0');
+  return `#${toHex(adj(r))}${toHex(adj(g))}${toHex(adj(b))}`;
 }
 
 // 사용자당 1장: 항상 같은 경로로 덮어쓰기
@@ -123,7 +179,7 @@ export async function uploadCustomBg(file) {
   if (!file.type.startsWith('image/')) throw new Error('이미지 파일만 업로드할 수 있습니다');
   if (file.size > 20 * 1024 * 1024) throw new Error('20MB 이하 이미지만 업로드할 수 있습니다');
 
-  const blob = await compressImage(file);
+  const { blob, palette } = await compressImage(file);
   const path = bgPath(user.id);
   const { error } = await supabase.storage
     .from(CUSTOM_BG_BUCKET)
@@ -131,10 +187,10 @@ export async function uploadCustomBg(file) {
   if (error) throw error;
 
   const url = getCustomBgUrl(user.id);
-  // 캐시 무력화용 버전 토큰을 prefs에 저장
-  const versioned = `${url}?v=${Date.now()}`;
-  await cloudStorage.set('dtb-custom-bg', versioned);
-  return versioned;
+  // 캐시 무력화용 버전 토큰 + 추출한 색상 세트를 함께 저장
+  const value = { url: `${url}?v=${Date.now()}`, colors: buildCustomColors(palette) };
+  await cloudStorage.set('dtb-custom-bg', JSON.stringify(value));
+  return value;
 }
 
 export function getCustomBgUrl(uid) {

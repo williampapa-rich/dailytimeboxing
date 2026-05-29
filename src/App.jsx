@@ -207,7 +207,10 @@ export default function App() {
     viewObserverRef.current = o;
   }, [measureView]);
 
-  const currentTheme = THEMES[themeId] || THEMES[DEFAULT_THEME];
+  const isCustom = themeId === 'custom' && customBg?.colors;
+  const currentTheme = isCustom
+    ? { id: 'custom', bgImage: customBg.url, colors: customBg.colors }
+    : (THEMES[themeId] || THEMES[DEFAULT_THEME]);
   const baseC = currentTheme.colors;
   const C = { ...baseC };
   // Apply user opacity to semi-transparent surfaces
@@ -237,11 +240,15 @@ export default function App() {
     (async () => {
       try {
         const t = await window.storage.get('dtb-theme');
-        if (t?.value && THEMES[t.value]) setThemeId(t.value);
         const o = await window.storage.get('dtb-opacity');
         if (o?.value) { const v = parseFloat(o.value); if (v >= 0.1 && v <= 1) setOpacity(v); }
         const bg = await window.storage.get('dtb-custom-bg');
-        if (bg?.value) setCustomBg(bg.value);
+        let parsedBg = null;
+        if (bg?.value) {
+          try { parsedBg = typeof bg.value === 'string' ? JSON.parse(bg.value) : bg.value; } catch (e) {}
+          if (parsedBg) setCustomBg(parsedBg);
+        }
+        if (t?.value && (THEMES[t.value] || (t.value === 'custom' && parsedBg))) setThemeId(t.value);
       } catch (e) {}
       setLoading(false);
     })();
@@ -262,20 +269,29 @@ export default function App() {
   }, [selectedDate]);
 
   const changeTheme = async (id) => {
-    if (!THEMES[id]) return;
+    if (!THEMES[id] && !(id === 'custom' && customBg?.colors)) return;
     setThemeId(id);
     try { await window.storage.set('dtb-theme', id); } catch (e) {}
   };
 
   const uploadBg = async (file) => {
-    const url = await uploadCustomBg(file);
-    setCustomBg(url);
-    return url;
+    const value = await uploadCustomBg(file);
+    setCustomBg(value);
+    // 업로드 직후 커스텀 테마를 바로 적용
+    setThemeId('custom');
+    try { await window.storage.set('dtb-theme', 'custom'); } catch (e) {}
+    return value;
   };
 
   const clearBg = async () => {
     await removeCustomBg();
     setCustomBg(null);
+    // 커스텀이 선택돼 있었다면 기본 테마로 되돌림
+    setThemeId((prev) => {
+      if (prev !== 'custom') return prev;
+      window.storage.set('dtb-theme', DEFAULT_THEME).catch(() => {});
+      return DEFAULT_THEME;
+    });
   };
 
   const changeOpacity = async (val) => {
@@ -709,7 +725,7 @@ export default function App() {
       {/* Background image */}
       <div style={{
         position: 'fixed', inset: 0, zIndex: 0,
-        backgroundImage: `url(${customBg || currentTheme.bgImage})`,
+        backgroundImage: `url(${currentTheme.bgImage})`,
         backgroundSize: 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat',
         pointerEvents: 'none',
       }} />

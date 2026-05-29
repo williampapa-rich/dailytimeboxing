@@ -60,12 +60,9 @@ function CustomBgUploader({ C, t, isLoggedIn, customBg, onUploadBg, onClearBg, o
         </div>
       ) : (
         <div>
-          {customBg && (
-            <div style={{ width: '100%', height: 100, borderRadius: 10, backgroundImage: `url(${customBg})`, backgroundSize: 'contain', backgroundPosition: 'center', backgroundRepeat: 'no-repeat', backgroundColor: C.hover, marginBottom: 12, border: `1px solid ${C.border}` }} />
-          )}
           <div style={{ display: 'flex', gap: 8 }}>
-            <button onClick={pick} disabled={uploading} style={{ padding: '9px 16px', borderRadius: 8, border: `1px solid ${C.borderStrong}`, backgroundColor: C.accent, color: '#fff', cursor: uploading ? 'default' : 'pointer', fontSize: 13, fontWeight: 600, opacity: uploading ? 0.6 : 1 }}>{uploading ? t.bgUploading : (customBg ? t.bgChange : t.bgUpload)}</button>
-            {customBg && (
+            <button onClick={pick} disabled={uploading} style={{ padding: '9px 16px', borderRadius: 8, border: `1px solid ${C.borderStrong}`, backgroundColor: C.accent, color: '#fff', cursor: uploading ? 'default' : 'pointer', fontSize: 13, fontWeight: 600, opacity: uploading ? 0.6 : 1 }}>{uploading ? t.bgUploading : (customBg?.url ? t.bgChange : t.bgUpload)}</button>
+            {customBg?.url && (
               <button onClick={clear} disabled={uploading} style={{ padding: '9px 16px', borderRadius: 8, border: `1px solid ${C.borderStrong}`, backgroundColor: 'transparent', color: C.text, cursor: uploading ? 'default' : 'pointer', fontSize: 13, fontWeight: 500, opacity: uploading ? 0.6 : 1 }}>{t.bgRemove}</button>
             )}
           </div>
@@ -113,6 +110,15 @@ function SectionContent({ section, C, t, lang, setLang, themeId, onChangeTheme, 
             </div>
           </button>
         ); })}
+        {customBg?.url && (() => { const active = themeId === 'custom'; return (
+          <button onClick={() => onChangeTheme('custom')} style={{ border: active ? `2px solid ${C.accent}` : '2px solid transparent', borderRadius: 12, overflow: 'hidden', cursor: 'pointer', backgroundColor: C.hover, padding: 0, textAlign: 'left', outline: active ? `2px solid ${C.accent}44` : 'none', outlineOffset: 2, transition: 'all 0.15s' }}>
+            <div style={{ width: '100%', height: 100, backgroundImage: `url(${customBg.url})`, backgroundSize: 'cover', backgroundPosition: 'center' }} />
+            <div style={{ padding: '10px 12px' }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: C.text }}>{t.customBgTitle}</div>
+              <div style={{ fontSize: 11, color: C.textMid, marginTop: 2 }}>{customBg.colors?.scheme === 'dark' ? t.dark : t.light}</div>
+            </div>
+          </button>
+        ); })()}
       </div>
       <div style={{ marginTop: 24 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
