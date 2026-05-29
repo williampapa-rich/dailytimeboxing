@@ -158,12 +158,15 @@ export function buildCustomColors(palette) {
     hover: 'rgba(235,233,224,0.6)', indicator: '#EF4444', indicatorSoft: 'rgba(239,68,68,0.18)',
     slotBg: 'rgba(235, 233, 224, 0.3)', inputBg: 'rgba(255,255,255,0.72)', inputBorder: '#D6D3CA', scheme: 'light',
   };
-  const tint = palette.tint || { r: 128, g: 128, b: 128 };
-  const AMT = 0.13;
-  // 표면 색만 틴팅(글씨/지표색은 가독성 위해 유지)
-  const surfaces = ['bg', 'card', 'cardAlt', 'border', 'borderStrong', 'hover', 'slotBg', 'inputBg', 'inputBorder'];
+  // 평균색은 채도가 죽어 칙칙하므로 accent(채도 있는 대표색)와 섞어 색감을 살림
+  const avg = palette.tint || { r: 128, g: 128, b: 128 };
+  const acc = hexToRgb(palette.accent);
+  const tint = { r: Math.round(avg.r * 0.5 + acc.r * 0.5), g: Math.round(avg.g * 0.5 + acc.g * 0.5), b: Math.round(avg.b * 0.5 + acc.b * 0.5) };
+  // 표면별 틴팅 강도(글씨/지표색은 가독성 위해 제외).
+  // 카드/박스 등 좁은 표면은 또렷하게, 전체 뒷배경(bg)은 사진이 이미 보이므로 약하게.
+  const amts = { bg: 0.12, card: 0.26, cardAlt: 0.26, border: 0.3, borderStrong: 0.3, hover: 0.3, slotBg: 0.3, inputBg: 0.26, inputBorder: 0.3 };
   const tinted = { ...base };
-  for (const k of surfaces) tinted[k] = tintColor(base[k], tint, AMT);
+  for (const k of Object.keys(amts)) tinted[k] = tintColor(base[k], tint, amts[k]);
   const accent = palette.accent;
   return { ...tinted, accent, accentHover: shade(accent, dark ? 0.12 : -0.1), accentActive: shade(accent, dark ? 0.24 : -0.2) };
 }
@@ -182,6 +185,11 @@ function tintColor(color, tint, amt) {
   const g = Math.round(+m[2] * (1 - amt) + tint.g * amt);
   const b = Math.round(+m[3] * (1 - amt) + tint.b * amt);
   return m[4] ? `rgba(${r},${g},${b},${m[4]})` : `rgb(${r},${g},${b})`;
+}
+
+function hexToRgb(hex) {
+  const m = (hex || '#808080').replace('#', '');
+  return { r: parseInt(m.slice(0, 2), 16), g: parseInt(m.slice(2, 4), 16), b: parseInt(m.slice(4, 6), 16) };
 }
 
 // hex 색을 amt(-1~1)만큼 밝게(+)/어둡게(-)
