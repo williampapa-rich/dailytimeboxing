@@ -121,8 +121,8 @@ async function analyzePalette(dataUrl) {
     const palette = await Vibrant.from(dataUrl).getPalette();
     // accent: 채도 높은 Vibrant 계열 우선
     const accentSw = palette.Vibrant || palette.LightVibrant || palette.DarkVibrant || palette.Muted;
-    // tint(표면 틴팅): 차분한 Muted 계열 우선
-    const tintSw = palette.Muted || palette.DarkMuted || palette.LightMuted || accentSw;
+    // tint(표면 틴팅): 채도 있는 Vibrant 계열을 그대로 사용해야 라이트/다크 기본색과 구분됨
+    const tintSw = palette.Vibrant || palette.DarkVibrant || palette.LightVibrant || palette.Muted || accentSw;
     if (!accentSw) return FALLBACK;
     // 전체 밝기: 인구수(population) 가중 평균
     let lumSum = 0, popSum = 0;
