@@ -295,7 +295,7 @@ export function StatsView({ C, t, lang, onBack }) {
       </div>
       {/* Body */}
       <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: 20 }}>
-        <div style={{ maxWidth: 880, margin: '0 auto' }}>
+        <div style={{ maxWidth: 660, margin: '0 auto' }}>
           <StatsSection C={C} t={t} lang={lang} isLoggedIn={isLoggedIn} />
         </div>
       </div>
