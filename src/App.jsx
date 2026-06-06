@@ -136,6 +136,9 @@ export default function App() {
   const { isAnonymous, loaded: authLoaded } = useAuthUser();
   const [themeId, setThemeId] = useState(DEFAULT_THEME);
   const [customBg, setCustomBg] = useState(null);
+  // Color source for the custom (photo) theme: 'auto' (extracted from photo),
+  // 'light' or 'dark' (reuse built-in palettes while keeping the photo).
+  const [customColorMode, setCustomColorMode] = useState('auto');
   const [opacity, setOpacity] = useState(0.6);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [fabOpen, setFabOpen] = useState(false);
@@ -215,8 +218,15 @@ export default function App() {
   }, [measureView]);
 
   const isCustom = themeId === 'custom' && customBg?.colors;
+  // For the custom theme, the photo (bgImage) is always the user's upload, but
+  // the color palette can be the auto-extracted one or a built-in light/dark.
+  const customColors = isCustom
+    ? (customColorMode === 'light' ? THEMES['light-desert'].colors
+      : customColorMode === 'dark' ? THEMES['dark-abstract'].colors
+      : customBg.colors)
+    : null;
   const currentTheme = isCustom
-    ? { id: 'custom', bgImage: customBg.url, colors: customBg.colors }
+    ? { id: 'custom', bgImage: customBg.url, colors: customColors }
     : (THEMES[themeId] || THEMES[DEFAULT_THEME]);
   const baseC = currentTheme.colors;
   const C = { ...baseC };
@@ -227,14 +237,10 @@ export default function App() {
     const a = m[4] ? parseFloat(m[4]) * factor : factor;
     return `rgba(${m[1]},${m[2]},${m[3]},${Math.min(1, a).toFixed(2)})`;
   };
-  // Solid (single-color) themes have no background photo, so opacity must not
-  // make their surfaces translucent.
-  if (!currentTheme.solid) {
-    C.bg = scaleAlpha(baseC.bg, opacity / 0.85);
-    C.card = scaleAlpha(baseC.card, opacity / 0.85);
-    C.cardAlt = scaleAlpha(baseC.cardAlt, opacity / 0.85);
-    C.inputBg = scaleAlpha(baseC.inputBg, opacity / 0.85);
-  }
+  C.bg = scaleAlpha(baseC.bg, opacity / 0.85);
+  C.card = scaleAlpha(baseC.card, opacity / 0.85);
+  C.cardAlt = scaleAlpha(baseC.cardAlt, opacity / 0.85);
+  C.inputBg = scaleAlpha(baseC.inputBg, opacity / 0.85);
   // No borderlines on surfaces — rely on shadow/contrast instead
   C.border = 'transparent';
   // Faint grid lines for the timeline (kept subtle for readability)
@@ -264,6 +270,8 @@ export default function App() {
           if (parsedBg) setCustomBg(parsedBg);
         }
         if (t?.value && (THEMES[t.value] || (t.value === 'custom' && parsedBg))) setThemeId(t.value);
+        const cm = await window.storage.get('dtb-custom-colormode');
+        if (cm?.value === 'light' || cm?.value === 'dark' || cm?.value === 'auto') setCustomColorMode(cm.value);
         const gcalEn = await window.storage.get('dtb-gcal-enabled');
         if (gcalEn?.value === 'true') setGcalEnabled(true);
       } catch (e) {}
@@ -314,6 +322,11 @@ export default function App() {
     if (!THEMES[id] && !(id === 'custom' && customBg?.colors)) return;
     setThemeId(id);
     try { await window.storage.set('dtb-theme', id); } catch (e) {}
+  };
+
+  const changeCustomColorMode = async (mode) => {
+    setCustomColorMode(mode);
+    try { await window.storage.set('dtb-custom-colormode', mode); } catch (e) {}
   };
 
   const uploadBg = async (file) => {
@@ -1186,7 +1199,7 @@ export default function App() {
         </div>
       </div>
 
-      <SettingsPanel isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} themeId={themeId} onChangeTheme={changeTheme} opacity={opacity} onChangeOpacity={changeOpacity} C={C} customBg={customBg} onUploadBg={uploadBg} onClearBg={clearBg} isAnonymous={isAnonymous} authLoaded={authLoaded} gcalEnabled={gcalEnabled} onChangeGcalEnabled={changeGcalEnabled} />
+      <SettingsPanel isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} themeId={themeId} onChangeTheme={changeTheme} opacity={opacity} onChangeOpacity={changeOpacity} C={C} customBg={customBg} onUploadBg={uploadBg} onClearBg={clearBg} isAnonymous={isAnonymous} authLoaded={authLoaded} gcalEnabled={gcalEnabled} onChangeGcalEnabled={changeGcalEnabled} customColorMode={customColorMode} onChangeCustomColorMode={changeCustomColorMode} />
       <Tutorial isOpen={tutorialOpen} onClose={() => setTutorialOpen(false)} C={C} mode={mode} setMode={setMode} setFabOpen={setFabOpen} />
     </div>
   );
