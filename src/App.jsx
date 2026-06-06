@@ -771,6 +771,13 @@ export default function App() {
     lastScrollRef.current = Date.now();
   };
 
+  // Explicit user interaction (drag/wheel) — bypass the programmatic-scroll
+  // guard so the 5s auto-recenter delay is honored after a manual drag.
+  const onUserScroll = () => {
+    progRef.current = 0;
+    lastScrollRef.current = Date.now();
+  };
+
   return (
     <div className="dtb-root" onClick={() => fabOpen && setFabOpen(false)} style={{ height: '100dvh', display: 'flex', flexDirection: 'column', overflow: mode === 'view' ? 'auto' : 'hidden', backgroundColor: C.bg, color: C.text, colorScheme: C.scheme, position: 'relative', opacity: loading ? 0 : 1, transition: 'opacity 0.4s ease' }}>
       {/* Background image */}
@@ -1002,6 +1009,7 @@ export default function App() {
             sw={sw}
             tw={tw}
             onScroll={onScroll}
+            onUserScroll={onUserScroll}
             toggleTaskInBox={toggleTaskInBox}
             toggleBoxDone={toggleBoxDone}
             isViewingToday={isToday(selectedDate)}
@@ -1666,7 +1674,7 @@ function EditView({
   );
 }
 
-function ViewMode({ t, C, viewRef, boxes, extEvents, sw, tw, onScroll, toggleTaskInBox, toggleBoxDone, isViewingToday, selectedDate }) {
+function ViewMode({ t, C, viewRef, boxes, extEvents, sw, tw, onScroll, onUserScroll, toggleTaskInBox, toggleBoxDone, isViewingToday, selectedDate }) {
   const timer = isViewingToday ? getTimerInfo(boxes) : { type: 'idle' };
   const urgent = !!timer.urgent && (timer.type === 'current' || timer.type === 'next');
   const urgentColor = C.indicator;
@@ -1681,8 +1689,10 @@ function ViewMode({ t, C, viewRef, boxes, extEvents, sw, tw, onScroll, toggleTas
     e.preventDefault();
     const dx = e.clientX - dragRef.current.startX;
     e.currentTarget.scrollLeft = dragRef.current.scrollLeft - dx;
+    onUserScroll?.();
   };
   const onDragEnd = (e) => {
+    if (dragRef.current.active) onUserScroll?.();
     dragRef.current.active = false;
     e.currentTarget.style.cursor = 'grab';
   };
