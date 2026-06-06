@@ -219,7 +219,7 @@ export function StatsSection({ C, t, lang, isLoggedIn }) {
                       boxSizing: 'border-box',
                       transition: 'transform 0.1s',
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      fontSize: 13, fontWeight: level >= 3 ? 700 : 500,
+                      fontSize: 'clamp(12px, 2.2vw, 18px)', fontWeight: level >= 3 ? 700 : 500,
                       color: level >= 2 ? '#fff' : (level === 0 ? C.textDim : C.text),
                       fontVariantNumeric: 'tabular-nums',
                     }}
@@ -295,7 +295,7 @@ export function StatsView({ C, t, lang, onBack }) {
       </div>
       {/* Body */}
       <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: 20 }}>
-        <div style={{ maxWidth: 640, margin: '0 auto' }}>
+        <div style={{ maxWidth: 880, margin: '0 auto' }}>
           <StatsSection C={C} t={t} lang={lang} isLoggedIn={isLoggedIn} />
         </div>
       </div>
