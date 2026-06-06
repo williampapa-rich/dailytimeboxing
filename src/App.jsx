@@ -8,6 +8,7 @@ import { useI18n } from './i18n.js';
 import Tutorial from './Tutorial.jsx';
 import { uploadCustomBg, removeCustomBg } from './supabase.js';
 import { useAuthUser } from './auth.js';
+import * as gcal from './providers/gcal.js';
 
 const SLOTS_PER_DAY = 48;
 const VISIBLE_SLOTS = 4;
@@ -158,6 +159,9 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [, setTick] = useState(0);
 
+  const [gcalEnabled, setGcalEnabled] = useState(false);
+  const [extEvents, setExtEvents] = useState([]);
+
   const [drag, setDrag] = useState({ anchor: null, current: null, didDrag: false });
   const [boxDrag, setBoxDrag] = useState(null);
   const [pendingClick, setPendingClick] = useState(null);
@@ -249,6 +253,8 @@ export default function App() {
           if (parsedBg) setCustomBg(parsedBg);
         }
         if (t?.value && (THEMES[t.value] || (t.value === 'custom' && parsedBg))) setThemeId(t.value);
+        const gcalEn = await window.storage.get('dtb-gcal-enabled');
+        if (gcalEn?.value === 'true') setGcalEnabled(true);
       } catch (e) {}
       setLoading(false);
     })();
@@ -267,6 +273,31 @@ export default function App() {
     })();
     return () => { cancelled = true; };
   }, [selectedDate]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      if (!gcalEnabled) { setExtEvents([]); return; }
+      try {
+        const connected = await gcal.isConnected();
+        if (!connected) { setExtEvents([]); return; }
+        const dateStr = toDateString(selectedDate);
+        const events = await gcal.listEvents(dateStr);
+        if (!cancelled) setExtEvents(events);
+      } catch (e) {
+        if (!cancelled) {
+          setExtEvents([]);
+          console.warn('gcal listEvents error:', e);
+        }
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [selectedDate, gcalEnabled]);
+
+  const changeGcalEnabled = async (val) => {
+    setGcalEnabled(val);
+    try { await window.storage.set('dtb-gcal-enabled', String(val)); } catch (e) {}
+  };
 
   const changeTheme = async (id) => {
     if (!THEMES[id] && !(id === 'custom' && customBg?.colors)) return;
@@ -910,6 +941,7 @@ export default function App() {
             t={t}
             C={C}
             boxes={boxes}
+            extEvents={extEvents}
             isViewingToday={isToday(selectedDate)}
             displayRange={displayRange}
             rangeConflicts={rangeConflicts}
@@ -944,6 +976,7 @@ export default function App() {
             C={C}
             viewRef={viewRef}
             boxes={boxes}
+            extEvents={extEvents}
             sw={sw}
             tw={tw}
             onScroll={onScroll}
@@ -1115,14 +1148,14 @@ export default function App() {
         </div>
       </div>
 
-      <SettingsPanel isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} themeId={themeId} onChangeTheme={changeTheme} opacity={opacity} onChangeOpacity={changeOpacity} C={C} customBg={customBg} onUploadBg={uploadBg} onClearBg={clearBg} isAnonymous={isAnonymous} authLoaded={authLoaded} />
+      <SettingsPanel isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} themeId={themeId} onChangeTheme={changeTheme} opacity={opacity} onChangeOpacity={changeOpacity} C={C} customBg={customBg} onUploadBg={uploadBg} onClearBg={clearBg} isAnonymous={isAnonymous} authLoaded={authLoaded} gcalEnabled={gcalEnabled} onChangeGcalEnabled={changeGcalEnabled} />
       <Tutorial isOpen={tutorialOpen} onClose={() => setTutorialOpen(false)} C={C} mode={mode} setMode={setMode} setFabOpen={setFabOpen} />
     </div>
   );
 }
 
 function EditView({
-  t, C, boxes, isViewingToday, displayRange, rangeConflicts, onSlotDown, onSlotEnter, onSlotLeave, onBoxMouseDown, boxDrag,
+  t, C, boxes, extEvents, isViewingToday, displayRange, rangeConflicts, onSlotDown, onSlotEnter, onSlotLeave, onBoxMouseDown, boxDrag,
   sel, editing, fTitle, setFTitle, fDesc, setFDesc, fColor, setFColor,
   fStart, setFStart, fEnd, setFEnd,
   fTasks, addTask, addTaskAfter, updateTaskText, toggleTask, removeTask,
@@ -1307,6 +1340,41 @@ function EditView({
                       {box.description}
                     </div>
                   )}
+                </div>
+              );
+            })}
+
+            {/* External (read-only) events — gcal */}
+            {(extEvents || []).map(box => {
+              const height = ((box.end - box.start) / MIN_PER_SLOT) * SLOT_HEIGHT - ROW_VERTICAL_MARGIN * 2;
+              const top = (box.start / MIN_PER_SLOT) * SLOT_HEIGHT + ROW_VERTICAL_MARGIN;
+              return (
+                <div
+                  key={box.id}
+                  style={{
+                    position: 'absolute',
+                    top, height, left: boxLeft, right: ROW_HORIZONTAL_MARGIN,
+                    backgroundColor: box.color,
+                    color: '#fff',
+                    borderRadius: 6,
+                    padding: '8px 12px',
+                    boxShadow: '0 1px 2px rgba(0,0,0,0.12)',
+                    cursor: 'default',
+                    overflow: 'hidden',
+                    zIndex: 9,
+                    opacity: 0.85,
+                    borderLeft: '3px solid rgba(255,255,255,0.5)',
+                  }}
+                >
+                  <div style={{ position: 'absolute', top: 5, right: 6, opacity: 0.7 }}>
+                    <Calendar size={10} />
+                  </div>
+                  <div className="dtb-tnum" style={{ fontSize: 10, opacity: 0.9, fontWeight: 500 }}>
+                    {formatRange(box.start, box.end)}
+                  </div>
+                  <div style={{ fontWeight: 700, fontSize: 13, lineHeight: 1.25, marginTop: 2, paddingRight: 14 }}>
+                    {box.title}
+                  </div>
                 </div>
               );
             })}
@@ -1574,7 +1642,7 @@ function EditView({
   );
 }
 
-function ViewMode({ t, C, viewRef, boxes, sw, tw, onScroll, toggleTaskInBox, isViewingToday, selectedDate }) {
+function ViewMode({ t, C, viewRef, boxes, extEvents, sw, tw, onScroll, toggleTaskInBox, isViewingToday, selectedDate }) {
   const timer = isViewingToday ? getTimerInfo(boxes) : { type: 'idle' };
   const urgent = !!timer.urgent && (timer.type === 'current' || timer.type === 'next');
   const urgentColor = C.indicator;
@@ -1817,6 +1885,36 @@ function ViewMode({ t, C, viewRef, boxes, sw, tw, onScroll, toggleTaskInBox, isV
                         ☐ {doneCount}/{taskCount}
                       </div>
                     )}
+                  </div>
+                );
+              })}
+
+              {(extEvents || []).map(box => {
+                const w = ((box.end - box.start) / MIN_PER_SLOT) * sw;
+                const left = (box.start / MIN_PER_SLOT) * sw;
+                return (
+                  <div
+                    key={box.id}
+                    style={{
+                      position: 'absolute',
+                      left: left + 3, top: 6,
+                      width: w - 6, height: 84,
+                      backgroundColor: box.color, color: '#fff',
+                      borderRadius: 6, padding: 8,
+                      boxShadow: '0 1px 2px rgba(0,0,0,0.12)',
+                      overflow: 'hidden',
+                      opacity: 0.85,
+                      cursor: 'default',
+                      borderLeft: '3px solid rgba(255,255,255,0.5)',
+                    }}
+                  >
+                    <div style={{ position: 'absolute', top: 5, right: 5, opacity: 0.7 }}>
+                      <Calendar size={10} />
+                    </div>
+                    <div className="dtb-tnum" style={{ fontSize: 9, opacity: 0.9, lineHeight: 1.2, fontWeight: 500 }}>
+                      {formatRange(box.start, box.end)}
+                    </div>
+                    <div style={{ fontWeight: 700, fontSize: 12, marginTop: 2, lineHeight: 1.25, paddingRight: 14 }}>{box.title}</div>
                   </div>
                 );
               })}

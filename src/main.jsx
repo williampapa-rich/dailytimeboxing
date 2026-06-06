@@ -6,6 +6,7 @@ import { I18nProvider } from './i18n.js';
 import { supabase, ensureSession, cloudStorage } from './supabase.js';
 import * as spotify from './providers/spotify.js';
 import * as youtube from './providers/youtube.js';
+import * as gcal from './providers/gcal.js';
 
 window.storage = cloudStorage;
 
@@ -75,6 +76,19 @@ async function handleOAuthCallbacks() {
       await youtube.handleCallbackHash(window.location.hash);
     } catch (e) {
       console.error('[youtube callback]', e);
+    } finally {
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+  }
+
+  const hashState = window.location.hash.includes('access_token=')
+    ? new URLSearchParams(window.location.hash.substring(1)).get('state') || ''
+    : '';
+  if (hashState.startsWith('gcal:')) {
+    try {
+      await gcal.handleCallbackHash(window.location.hash);
+    } catch (e) {
+      console.error('[gcal callback]', e);
     } finally {
       window.history.replaceState({}, '', window.location.pathname);
     }

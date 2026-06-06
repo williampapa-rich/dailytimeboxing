@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
-import { X, Palette, Clock, BarChart3, User, HelpCircle, LogOut, Globe, ChevronLeft, ChevronRight } from 'lucide-react';
+import { X, Palette, Clock, BarChart3, User, HelpCircle, LogOut, Globe, ChevronLeft, ChevronRight, Calendar } from 'lucide-react';
 import { useAuthUser } from './auth.js';
 import { signInWithGoogle, signOut } from './supabase.js';
 import { THEMES } from './themes.js';
 import { useI18n, SUPPORTED_LANGS, LANG_NAMES } from './i18n.js';
+import * as gcal from './providers/gcal.js';
 
 const GoogleIcon = ({ size = 16 }) => (
   <svg width={size} height={size} viewBox="0 0 48 48" aria-hidden="true">
@@ -74,7 +75,7 @@ function CustomBgUploader({ C, t, isLoggedIn, customBg, onUploadBg, onClearBg, o
   );
 }
 
-function SectionContent({ section, C, t, lang, setLang, themeId, onChangeTheme, opacity, onChangeOpacity, isLoggedIn, avatarUrl, displayName, email, onGoogleSignIn, onLogout, busy, customBg, onUploadBg, onClearBg }) {
+function SectionContent({ section, C, t, lang, setLang, themeId, onChangeTheme, opacity, onChangeOpacity, isLoggedIn, avatarUrl, displayName, email, onGoogleSignIn, onLogout, busy, customBg, onUploadBg, onClearBg, gcalEnabled, onChangeGcalEnabled }) {
   if (section === 'account') return (
     <div>
       <h2 style={{ fontSize: 18, fontWeight: 700, margin: '0 0 20px', color: C.text }}>{t.account}</h2>
@@ -154,15 +155,114 @@ function SectionContent({ section, C, t, lang, setLang, themeId, onChangeTheme, 
       </div>
     </div>
   );
+  if (section === 'calendar') return (
+    <GcalSection C={C} t={t} gcalEnabled={gcalEnabled} onChangeGcalEnabled={onChangeGcalEnabled} />
+  );
   return null;
 }
 
-export default function SettingsPanel({ isOpen, onClose, themeId, onChangeTheme, opacity, onChangeOpacity, C, customBg, onUploadBg, onClearBg }) {
+function GcalSection({ C, t, gcalEnabled, onChangeGcalEnabled }) {
+  const [connected, setConnected] = useState(false);
+  const [checking, setChecking] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    gcal.isConnected().then(v => { if (!cancelled) { setConnected(v); setChecking(false); } }).catch(() => { if (!cancelled) setChecking(false); });
+    return () => { cancelled = true; };
+  }, []);
+
+  const handleConnect = async () => {
+    try { await gcal.beginAuth(); } catch (e) { console.error(e); }
+  };
+
+  const handleDisconnect = async () => {
+    await gcal.disconnect();
+    setConnected(false);
+    if (onChangeGcalEnabled) onChangeGcalEnabled(false);
+  };
+
+  if (checking) return (
+    <div>
+      <h2 style={{ fontSize: 18, fontWeight: 700, margin: '0 0 20px', color: C.text }}>{t.calendarTitle}</h2>
+      <p style={{ color: C.textMid, fontSize: 13 }}>{t.loading}</p>
+    </div>
+  );
+
+  return (
+    <div>
+      <h2 style={{ fontSize: 18, fontWeight: 700, margin: '0 0 8px', color: C.text }}>{t.calendarTitle}</h2>
+      <p style={{ fontSize: 12, color: C.textMid, marginBottom: 20, lineHeight: 1.6 }}>{t.calendarDesc}</p>
+
+      {!connected ? (
+        <button
+          onClick={handleConnect}
+          style={{
+            display: 'inline-flex', alignItems: 'center', gap: 8,
+            padding: '10px 18px', borderRadius: 8,
+            backgroundColor: C.accent, color: '#fff',
+            border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 600,
+            transition: 'all 0.15s',
+          }}
+        >
+          <Calendar size={15} />
+          {t.calendarConnect}
+        </button>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          {/* Connected status */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px', backgroundColor: C.hover, borderRadius: 10 }}>
+            <div style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: '#22C55E', flexShrink: 0 }} />
+            <span style={{ fontSize: 13, fontWeight: 600, color: C.text, flex: 1 }}>{t.calendarConnected}</span>
+          </div>
+
+          {/* Show toggle */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', backgroundColor: C.hover, borderRadius: 10 }}>
+            <span style={{ fontSize: 13, color: C.text, fontWeight: 500 }}>{t.calendarShow}</span>
+            <button
+              onClick={() => onChangeGcalEnabled && onChangeGcalEnabled(!gcalEnabled)}
+              style={{
+                width: 44, height: 24, borderRadius: 12,
+                backgroundColor: gcalEnabled ? C.accent : C.borderStrong,
+                border: 'none', cursor: 'pointer', position: 'relative',
+                transition: 'background-color 0.2s', flexShrink: 0,
+              }}
+            >
+              <div style={{
+                position: 'absolute', top: 3, left: gcalEnabled ? 23 : 3,
+                width: 18, height: 18, borderRadius: '50%', backgroundColor: '#fff',
+                transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+              }} />
+            </button>
+          </div>
+
+          {/* Disconnect */}
+          <button
+            onClick={handleDisconnect}
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: 8,
+              padding: '9px 16px', borderRadius: 8,
+              backgroundColor: 'transparent', color: C.textMid,
+              border: `1px solid ${C.borderStrong}`, cursor: 'pointer',
+              fontSize: 13, fontWeight: 500, transition: 'all 0.15s',
+            }}
+            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = C.hover}
+            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+          >
+            {t.calendarDisconnect}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default function SettingsPanel({ isOpen, onClose, themeId, onChangeTheme, opacity, onChangeOpacity, C, customBg, onUploadBg, onClearBg, gcalEnabled, onChangeGcalEnabled }) {
   const { t, lang, setLang } = useI18n();
   const mobile = useMobile();
   const MENU = [
     { key: 'account', icon: User, label: t.account },
     { key: 'themes', icon: Palette, label: t.themes },
+    { key: 'calendar', icon: Calendar, label: t.calendarTitle },
     { key: 'clock', icon: Clock, label: t.clock },
     { key: 'stats', icon: BarChart3, label: t.stats },
     { key: 'support', icon: HelpCircle, label: t.support },
@@ -187,7 +287,7 @@ export default function SettingsPanel({ isOpen, onClose, themeId, onChangeTheme,
   const onGoogleSignIn = async () => { setBusy(true); try { await signInWithGoogle(); } catch (e) { console.error(e); } finally { setBusy(false); } };
   const onLogout = async () => { setBusy(true); try { await signOut(); window.location.reload(); } finally { setBusy(false); } };
 
-  const sectionProps = { C, t, lang, setLang, themeId, onChangeTheme, opacity, onChangeOpacity, isLoggedIn, avatarUrl, displayName, email, onGoogleSignIn, onLogout, busy, customBg, onUploadBg, onClearBg };
+  const sectionProps = { C, t, lang, setLang, themeId, onChangeTheme, opacity, onChangeOpacity, isLoggedIn, avatarUrl, displayName, email, onGoogleSignIn, onLogout, busy, customBg, onUploadBg, onClearBg, gcalEnabled, onChangeGcalEnabled };
 
   // Mobile: full-screen drill-down
   if (mobile) {
