@@ -317,7 +317,7 @@ export default function MusicPlayer({ appColors }) {
               border: AC.border ? `1px solid ${AC.border}` : 'none',
               backgroundColor: AC.card || '#1a1a1a', color: AC.text || '#fff',
               backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
-              boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
+              boxShadow: '0 2px 10px rgba(0,0,0,0.08)',
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
               transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
             }}

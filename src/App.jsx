@@ -233,6 +233,8 @@ export default function App() {
   C.inputBg = scaleAlpha(baseC.inputBg, opacity / 0.85);
   // No borderlines on surfaces — rely on shadow/contrast instead
   C.border = 'transparent';
+  // Faint grid lines for the timeline (kept subtle for readability)
+  C.gridLine = baseC.scheme === 'light' ? 'rgba(0,0,0,0.07)' : 'rgba(255,255,255,0.07)';
   const theme = C.scheme;
   const sw = cw / VISIBLE_SLOTS;
   const tw = sw * SLOTS_PER_DAY;
@@ -1022,7 +1024,7 @@ export default function App() {
             border: `1px solid ${C.border}`, cursor: 'pointer',
             backgroundColor: C.card, color: C.text,
             backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
-            boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
+            boxShadow: '0 2px 10px rgba(0,0,0,0.08)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
           }}
@@ -1039,7 +1041,7 @@ export default function App() {
             border: `1px solid ${C.border}`, cursor: 'pointer',
             backgroundColor: C.card, color: C.text,
             backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
-            boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
+            boxShadow: '0 2px 10px rgba(0,0,0,0.08)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
           }}
@@ -1057,7 +1059,7 @@ export default function App() {
               border: `1px solid ${C.border}`, cursor: 'pointer',
               backgroundColor: C.card, color: C.text,
               backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
-              boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
+              boxShadow: '0 2px 10px rgba(0,0,0,0.08)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
               transform: fabOpen ? 'rotate(90deg)' : 'rotate(0deg)',
@@ -1083,7 +1085,7 @@ export default function App() {
                 border: `1px solid ${C.border}`, cursor: 'pointer',
                 backgroundColor: C.card, color: C.text,
                 backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
-                boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
+                boxShadow: '0 2px 10px rgba(0,0,0,0.08)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
               }}>{item.icon}</button>
             </div>
@@ -1873,7 +1875,7 @@ function ViewMode({ t, C, viewRef, boxes, extEvents, sw, tw, onScroll, toggleTas
                       position: 'absolute',
                       left: i * sw, width: sw, top: 6, height: 84,
                       backgroundColor: C.slotBg,
-                      borderLeft: isHour ? `1px solid ${C.border}` : `1px dashed ${C.border}80`
+                      borderLeft: isHour ? `1px solid ${C.gridLine}` : `1px dashed ${C.gridLine}`
                     }}
                   />
                 );
