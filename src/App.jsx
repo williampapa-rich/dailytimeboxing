@@ -231,6 +231,8 @@ export default function App() {
   C.card = scaleAlpha(baseC.card, opacity / 0.85);
   C.cardAlt = scaleAlpha(baseC.cardAlt, opacity / 0.85);
   C.inputBg = scaleAlpha(baseC.inputBg, opacity / 0.85);
+  // No borderlines on surfaces — rely on shadow/contrast instead
+  C.border = 'transparent';
   const theme = C.scheme;
   const sw = cw / VISIBLE_SLOTS;
   const tw = sw * SLOTS_PER_DAY;
