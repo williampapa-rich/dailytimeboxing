@@ -1682,6 +1682,13 @@ function ViewMode({ t, C, viewRef, boxes, extEvents, sw, tw, onScroll, onUserScr
   const timer = isViewingToday ? getTimerInfo(boxes) : { type: 'idle' };
   const urgent = !!timer.urgent && (timer.type === 'current' || timer.type === 'next');
   const urgentColor = C.indicator;
+  const [nowMin, setNowMin] = useState(() => getCurrentMin());
+  useEffect(() => {
+    if (!isViewingToday) return;
+    const i = setInterval(() => setNowMin(getCurrentMin()), 1000);
+    return () => clearInterval(i);
+  }, [isViewingToday]);
+  const nowLeft = (nowMin / MIN_PER_SLOT) * sw;
   const dragRef = useRef({ active: false, startX: 0, scrollLeft: 0 });
   const onDragStart = (e) => {
     const el = e.currentTarget;
@@ -1844,29 +1851,6 @@ function ViewMode({ t, C, viewRef, boxes, extEvents, sw, tw, onScroll, onUserScr
           <div style={{ position: 'absolute', top: 0, left: 0, bottom: 0, width: 48, background: `linear-gradient(to right, ${C.cardAlt} 0%, ${C.cardAlt}cc 50%, transparent 100%)`, pointerEvents: 'none', zIndex: 10 }} />
           <div style={{ position: 'absolute', top: 0, right: 0, bottom: 0, width: 48, background: `linear-gradient(to left, ${C.cardAlt} 0%, ${C.cardAlt}cc 50%, transparent 100%)`, pointerEvents: 'none', zIndex: 10 }} />
 
-          {/* Current time indicator - RED */}
-          {isViewingToday && (
-          <div style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', top: 0, height: 108, zIndex: 20, pointerEvents: 'none' }}>
-            <div style={{
-              position: 'absolute', top: -24, left: '50%', transform: 'translateX(-50%)',
-              backgroundColor: C.indicator, color: 'white', fontSize: 9, padding: '2px 8px',
-              borderRadius: 4, fontWeight: 700, whiteSpace: 'nowrap', letterSpacing: '0.1em', textTransform: 'uppercase',
-              boxShadow: `0 1px 3px ${C.indicator}66`
-            }}>
-              {t.now}
-            </div>
-            <div style={{
-              position: 'absolute', top: 0, left: '50%', transform: 'translateX(-50%)',
-              width: 12, height: 12, borderRadius: '50%', backgroundColor: C.indicator,
-              boxShadow: `0 0 0 3px ${C.card}, 0 0 0 5px ${C.indicator}40`
-            }} />
-            <div style={{
-              width: 2, height: '100%', backgroundColor: C.indicator, margin: '0 auto',
-              boxShadow: `0 0 0 1px ${C.card}40`
-            }} />
-          </div>
-          )}
-
           <div
             ref={viewRef}
             onScroll={onScroll}
@@ -1878,6 +1862,29 @@ function ViewMode({ t, C, viewRef, boxes, extEvents, sw, tw, onScroll, onUserScr
             style={{ overflowX: 'auto', overflowY: 'hidden', width: '100%', cursor: 'grab' }}
           >
             <div style={{ position: 'relative', width: tw, height: 144 }}>
+              {/* Current time indicator - RED (positioned at the real time) */}
+              {isViewingToday && sw > 0 && (
+                <div style={{ position: 'absolute', left: nowLeft, top: 0, height: 108, zIndex: 20, pointerEvents: 'none' }}>
+                  <div style={{
+                    position: 'absolute', top: -24, left: '50%', transform: 'translateX(-50%)',
+                    backgroundColor: C.indicator, color: 'white', fontSize: 9, padding: '2px 8px',
+                    borderRadius: 4, fontWeight: 700, whiteSpace: 'nowrap', letterSpacing: '0.1em', textTransform: 'uppercase',
+                    boxShadow: `0 1px 3px ${C.indicator}66`
+                  }}>
+                    {t.now}
+                  </div>
+                  <div style={{
+                    position: 'absolute', top: 0, left: '50%', transform: 'translateX(-50%)',
+                    width: 12, height: 12, borderRadius: '50%', backgroundColor: C.indicator,
+                    boxShadow: `0 0 0 3px ${C.card}, 0 0 0 5px ${C.indicator}40`
+                  }} />
+                  <div style={{
+                    position: 'absolute', top: 0, left: '50%', transform: 'translateX(-50%)',
+                    width: 2, height: '100%', backgroundColor: C.indicator,
+                    boxShadow: `0 0 0 1px ${C.card}40`
+                  }} />
+                </div>
+              )}
               {sw > 0 && (
               <>
               {Array.from({ length: SLOTS_PER_DAY }).map((_, i) => {
