@@ -136,7 +136,7 @@ export default function App() {
   const { isAnonymous, loaded: authLoaded } = useAuthUser();
   const [themeId, setThemeId] = useState(DEFAULT_THEME);
   const [customBg, setCustomBg] = useState(null);
-  const [opacity, setOpacity] = useState(0.8);
+  const [opacity, setOpacity] = useState(0.6);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [fabOpen, setFabOpen] = useState(false);
   const [copied, setCopied] = useState(false);
