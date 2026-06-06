@@ -128,8 +128,8 @@ export function StatsSection({ C, t, lang, isLoggedIn }) {
   // Day-of-week headers Mon~Sun using t.days (Sun=0…Sat=6), reorder to Mon-first
   const dowLabels = [t.days[1], t.days[2], t.days[3], t.days[4], t.days[5], t.days[6], t.days[0]];
 
-  const CELL = 16;
-  const GAP = 3;
+  const CELL = 30;
+  const GAP = 5;
 
   // Stats for selected day
   let totalDoneMin = 0, earliestStart = null, latestEnd = null;
@@ -182,12 +182,12 @@ export function StatsSection({ C, t, lang, isLoggedIn }) {
       </div>
 
       {/* Heatmap grid */}
-      <div style={{ overflowX: 'auto' }}>
+      <div style={{ overflowX: 'auto', display: 'flex', justifyContent: 'center' }}>
         <div style={{ display: 'inline-block', minWidth: 'max-content' }}>
           {/* DOW headers */}
           <div style={{ display: 'grid', gridTemplateColumns: `repeat(7, ${CELL}px)`, gap: GAP, marginBottom: 4 }}>
             {dowLabels.map((d, i) => (
-              <div key={i} style={{ width: CELL, textAlign: 'center', fontSize: 9, color: C.textDim, fontWeight: 600 }}>{d}</div>
+              <div key={i} style={{ width: CELL, textAlign: 'center', fontSize: 11, color: C.textDim, fontWeight: 600 }}>{d}</div>
             ))}
           </div>
           {/* Calendar rows */}
@@ -202,13 +202,14 @@ export function StatsSection({ C, t, lang, isLoggedIn }) {
                 const isSelected = dateStr === selectedDay;
                 const todayStr = toYMD(new Date());
                 const isToday = dateStr === todayStr;
+                const dayNum = parseInt(dateStr.slice(-2), 10);
                 return (
                   <div
                     key={dateStr}
                     title={`${dateStr}: ${mins}m`}
                     onClick={() => handleDayClick(dateStr)}
                     style={{
-                      width: CELL, height: CELL, borderRadius: 3,
+                      width: CELL, height: CELL, borderRadius: 5,
                       backgroundColor: level === 0 ? 'transparent' : intensityColor(level, C.accent),
                       border: isSelected
                         ? `2px solid ${C.accent}`
@@ -218,10 +219,14 @@ export function StatsSection({ C, t, lang, isLoggedIn }) {
                       cursor: 'pointer',
                       boxSizing: 'border-box',
                       transition: 'transform 0.1s',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: 10, fontWeight: level >= 3 ? 700 : 500,
+                      color: level >= 2 ? '#fff' : (level === 0 ? C.textDim : C.text),
+                      fontVariantNumeric: 'tabular-nums',
                     }}
-                    onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.2)'}
+                    onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.12)'}
                     onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
-                  />
+                  >{dayNum}</div>
                 );
               })}
             </div>
