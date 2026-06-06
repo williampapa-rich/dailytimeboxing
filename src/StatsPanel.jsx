@@ -232,7 +232,7 @@ export function StatsSection({ C, t, lang, isLoggedIn }) {
           )}
 
           {/* Intensity legend */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 8 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 4, marginTop: 8 }}>
             <span style={{ fontSize: 9, color: C.textDim }}>0m</span>
             {[0, 1, 2, 3, 4].map(lv => (
               <div key={lv} style={{ width: 10, height: 10, borderRadius: 2, backgroundColor: lv === 0 ? 'transparent' : intensityColor(lv, C.accent), border: `1px solid ${C.border}`, boxSizing: 'border-box' }} />
