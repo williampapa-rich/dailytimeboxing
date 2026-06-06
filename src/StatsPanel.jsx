@@ -128,8 +128,7 @@ export function StatsSection({ C, t, lang, isLoggedIn }) {
   // Day-of-week headers Mon~Sun using t.days (Sun=0…Sat=6), reorder to Mon-first
   const dowLabels = [t.days[1], t.days[2], t.days[3], t.days[4], t.days[5], t.days[6], t.days[0]];
 
-  const CELL = 30;
-  const GAP = 5;
+  const GAP = 8;
 
   // Stats for selected day
   let totalDoneMin = 0, earliestStart = null, latestEnd = null;
@@ -182,21 +181,21 @@ export function StatsSection({ C, t, lang, isLoggedIn }) {
       </div>
 
       {/* Heatmap grid */}
-      <div style={{ overflowX: 'auto', display: 'flex', justifyContent: 'center' }}>
-        <div style={{ display: 'inline-block', minWidth: 'max-content' }}>
+      <div>
+        <div style={{ width: '100%' }}>
           {/* DOW headers */}
-          <div style={{ display: 'grid', gridTemplateColumns: `repeat(7, ${CELL}px)`, gap: GAP, marginBottom: 4 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: GAP, marginBottom: 4 }}>
             {dowLabels.map((d, i) => (
-              <div key={i} style={{ width: CELL, textAlign: 'center', fontSize: 11, color: C.textDim, fontWeight: 600 }}>{d}</div>
+              <div key={i} style={{ textAlign: 'center', fontSize: 11, color: C.textDim, fontWeight: 600 }}>{d}</div>
             ))}
           </div>
           {/* Calendar rows */}
           {loading ? (
             <div style={{ fontSize: 12, color: C.textDim, padding: '8px 0' }}>{t.loading}</div>
           ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: `repeat(7, ${CELL}px)`, gap: GAP }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: GAP }}>
               {cells.map((dateStr, idx) => {
-                if (!dateStr) return <div key={idx} style={{ width: CELL, height: CELL }} />;
+                if (!dateStr) return <div key={idx} style={{ aspectRatio: '1' }} />;
                 const mins = heatmap[dateStr] || 0;
                 const level = getIntensity(mins);
                 const isSelected = dateStr === selectedDay;
@@ -209,7 +208,7 @@ export function StatsSection({ C, t, lang, isLoggedIn }) {
                     title={`${dateStr}: ${mins}m`}
                     onClick={() => handleDayClick(dateStr)}
                     style={{
-                      width: CELL, height: CELL, borderRadius: 5,
+                      aspectRatio: '1', borderRadius: 6,
                       backgroundColor: level === 0 ? 'transparent' : intensityColor(level, C.accent),
                       border: isSelected
                         ? `2px solid ${C.accent}`
@@ -220,11 +219,11 @@ export function StatsSection({ C, t, lang, isLoggedIn }) {
                       boxSizing: 'border-box',
                       transition: 'transform 0.1s',
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      fontSize: 10, fontWeight: level >= 3 ? 700 : 500,
+                      fontSize: 13, fontWeight: level >= 3 ? 700 : 500,
                       color: level >= 2 ? '#fff' : (level === 0 ? C.textDim : C.text),
                       fontVariantNumeric: 'tabular-nums',
                     }}
-                    onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.12)'}
+                    onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.08)'}
                     onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
                   >{dayNum}</div>
                 );
@@ -296,7 +295,7 @@ export function StatsView({ C, t, lang, onBack }) {
       </div>
       {/* Body */}
       <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: 20 }}>
-        <div style={{ maxWidth: 420, margin: '0 auto' }}>
+        <div style={{ maxWidth: 640, margin: '0 auto' }}>
           <StatsSection C={C} t={t} lang={lang} isLoggedIn={isLoggedIn} />
         </div>
       </div>
