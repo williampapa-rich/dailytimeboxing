@@ -227,10 +227,14 @@ export default function App() {
     const a = m[4] ? parseFloat(m[4]) * factor : factor;
     return `rgba(${m[1]},${m[2]},${m[3]},${Math.min(1, a).toFixed(2)})`;
   };
-  C.bg = scaleAlpha(baseC.bg, opacity / 0.85);
-  C.card = scaleAlpha(baseC.card, opacity / 0.85);
-  C.cardAlt = scaleAlpha(baseC.cardAlt, opacity / 0.85);
-  C.inputBg = scaleAlpha(baseC.inputBg, opacity / 0.85);
+  // Solid (single-color) themes have no background photo, so opacity must not
+  // make their surfaces translucent.
+  if (!currentTheme.solid) {
+    C.bg = scaleAlpha(baseC.bg, opacity / 0.85);
+    C.card = scaleAlpha(baseC.card, opacity / 0.85);
+    C.cardAlt = scaleAlpha(baseC.cardAlt, opacity / 0.85);
+    C.inputBg = scaleAlpha(baseC.inputBg, opacity / 0.85);
+  }
   // No borderlines on surfaces — rely on shadow/contrast instead
   C.border = 'transparent';
   // Faint grid lines for the timeline (kept subtle for readability)
@@ -783,7 +787,7 @@ export default function App() {
       {/* Background image */}
       <div style={{
         position: 'fixed', inset: 0, zIndex: 0,
-        backgroundImage: `url(${currentTheme.bgImage})`,
+        backgroundImage: currentTheme.bgImage ? `url(${currentTheme.bgImage})` : 'none',
         backgroundSize: 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat',
         pointerEvents: 'none',
       }} />

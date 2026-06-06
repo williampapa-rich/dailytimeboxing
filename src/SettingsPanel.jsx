@@ -102,7 +102,7 @@ function SectionContent({ section, C, t, lang, setLang, themeId, onChangeTheme, 
     <div>
       <h2 style={{ fontSize: 18, fontWeight: 700, margin: '0 0 20px', color: C.text }}>{t.themes}</h2>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12 }}>
-        {Object.values(THEMES).map(th => { const active = themeId === th.id; return (
+        {Object.values(THEMES).filter(th => !th.solid).map(th => { const active = themeId === th.id; return (
           <button key={th.id} onClick={() => onChangeTheme(th.id)} style={{ border: active ? `2px solid ${C.accent}` : '2px solid transparent', borderRadius: 12, overflow: 'hidden', cursor: 'pointer', backgroundColor: C.hover, padding: 0, textAlign: 'left', outline: active ? `2px solid ${C.accent}44` : 'none', outlineOffset: 2, transition: 'all 0.15s' }}>
             <div style={{ width: '100%', height: 100, backgroundImage: `url(${th.bgImage})`, backgroundSize: 'cover', backgroundPosition: 'center' }} />
             <div style={{ padding: '10px 12px' }}>
@@ -120,6 +120,23 @@ function SectionContent({ section, C, t, lang, setLang, themeId, onChangeTheme, 
             </div>
           </button>
         ); })()}
+      </div>
+      {/* Solid (single-color) themes */}
+      <div style={{ marginTop: 16, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+        {[
+          { id: 'pure-white', label: t.themeWhite, bg: '#FAFAF9', fg: '#1F1E1D' },
+          { id: 'pure-black', label: t.themeBlack, bg: '#1A1A1A', fg: '#F5F4EE' },
+        ].map(opt => { const active = themeId === opt.id; return (
+          <button key={opt.id} onClick={() => onChangeTheme(opt.id)} style={{
+            display: 'flex', alignItems: 'center', gap: 8, padding: '10px 12px', borderRadius: 10,
+            border: active ? `2px solid ${C.accent}` : '2px solid transparent',
+            outline: active ? `2px solid ${C.accent}44` : 'none', outlineOffset: 2,
+            backgroundColor: C.hover, cursor: 'pointer', transition: 'all 0.15s',
+          }}>
+            <span style={{ width: 18, height: 18, borderRadius: 999, backgroundColor: opt.bg, border: `1px solid ${C.borderStrong}`, flexShrink: 0 }} />
+            <span style={{ fontSize: 13, fontWeight: 600, color: C.text }}>{opt.label}</span>
+          </button>
+        ); })}
       </div>
       <div style={{ marginTop: 24 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
