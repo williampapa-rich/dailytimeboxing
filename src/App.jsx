@@ -721,7 +721,9 @@ export default function App() {
     b.id !== editing?.id && !(displayRange.end <= b.start || displayRange.start >= b.end)
   );
 
-  const getTarget = useCallback(() => (getCurrentMin() / MIN_PER_SLOT) * sw - cw / 2, [sw, cw]);
+  // Content is shifted right by PAD (= cw/2), so centering the current time
+  // simplifies to (now/slot)*sw. Stays positive all day → no clamp at edges.
+  const getTarget = useCallback(() => (getCurrentMin() / MIN_PER_SLOT) * sw, [sw]);
 
   const viewingToday = isToday(selectedDate);
 
@@ -1688,7 +1690,10 @@ function ViewMode({ t, C, viewRef, boxes, extEvents, sw, tw, onScroll, onUserScr
     const i = setInterval(() => setNowMin(getCurrentMin()), 1000);
     return () => clearInterval(i);
   }, [isViewingToday]);
-  const nowLeft = (nowMin / MIN_PER_SLOT) * sw;
+  // Side padding so the current time can sit at the center even at the very
+  // start/end of the day (PAD = half the visible width = cw/2).
+  const PAD = sw * VISIBLE_SLOTS / 2;
+  const nowLeft = PAD + (nowMin / MIN_PER_SLOT) * sw;
   const dragRef = useRef({ active: false, startX: 0, scrollLeft: 0 });
   const onDragStart = (e) => {
     const el = e.currentTarget;
@@ -1861,10 +1866,10 @@ function ViewMode({ t, C, viewRef, boxes, extEvents, sw, tw, onScroll, onUserScr
             className="dtb-no-scrollbar"
             style={{ overflowX: 'auto', overflowY: 'hidden', width: '100%', cursor: 'grab' }}
           >
-            <div style={{ position: 'relative', width: tw, height: 144 }}>
+            <div style={{ position: 'relative', width: tw + PAD * 2, height: 168 }}>
               {/* Current time indicator - RED (positioned at the real time) */}
               {isViewingToday && sw > 0 && (
-                <div style={{ position: 'absolute', left: nowLeft, top: 0, height: 108, zIndex: 20, pointerEvents: 'none' }}>
+                <div style={{ position: 'absolute', left: nowLeft, top: 24, height: 108, zIndex: 20, pointerEvents: 'none' }}>
                   <div style={{
                     position: 'absolute', top: -24, left: '50%', transform: 'translateX(-50%)',
                     backgroundColor: C.indicator, color: 'white', fontSize: 9, padding: '2px 8px',
@@ -1894,7 +1899,7 @@ function ViewMode({ t, C, viewRef, boxes, extEvents, sw, tw, onScroll, onUserScr
                     key={`slot-${i}`}
                     style={{
                       position: 'absolute',
-                      left: i * sw, width: sw, top: 6, height: 84,
+                      left: PAD + i * sw, width: sw, top: 30, height: 84,
                       backgroundColor: C.slotBg,
                       borderLeft: isHour ? `1px solid ${C.gridLine}` : `1px dashed ${C.gridLine}`
                     }}
@@ -1904,7 +1909,7 @@ function ViewMode({ t, C, viewRef, boxes, extEvents, sw, tw, onScroll, onUserScr
 
               {boxes.map(box => {
                 const w = ((box.end - box.start) / MIN_PER_SLOT) * sw;
-                const left = (box.start / MIN_PER_SLOT) * sw;
+                const left = PAD + (box.start / MIN_PER_SLOT) * sw;
                 const txt = getContrastText(box.color);
                 const taskCount = box.tasks?.length || 0;
                 const doneCount = box.tasks?.filter(t => t.done).length || 0;
@@ -1920,7 +1925,7 @@ function ViewMode({ t, C, viewRef, boxes, extEvents, sw, tw, onScroll, onUserScr
                     key={box.id}
                     style={{
                       position: 'absolute',
-                      left: left + 3, top: 6,
+                      left: left + 3, top: 30,
                       width: w - 6, height: 84,
                       backgroundColor: box.color, color: txt,
                       borderRadius: 6, padding: 8,
@@ -1966,13 +1971,13 @@ function ViewMode({ t, C, viewRef, boxes, extEvents, sw, tw, onScroll, onUserScr
 
               {(extEvents || []).map(box => {
                 const w = ((box.end - box.start) / MIN_PER_SLOT) * sw;
-                const left = (box.start / MIN_PER_SLOT) * sw;
+                const left = PAD + (box.start / MIN_PER_SLOT) * sw;
                 return (
                   <div
                     key={box.id}
                     style={{
                       position: 'absolute',
-                      left: left + 3, top: 6,
+                      left: left + 3, top: 30,
                       width: w - 6, height: 84,
                       backgroundColor: box.color, color: '#fff',
                       borderRadius: 6, padding: 8,
@@ -1998,7 +2003,7 @@ function ViewMode({ t, C, viewRef, boxes, extEvents, sw, tw, onScroll, onUserScr
                 const isHour = i % 2 === 0;
                 return (
                   <div key={`tick-${i}`} style={{
-                    position: 'absolute', left: i * sw - 0.5, top: 98,
+                    position: 'absolute', left: PAD + i * sw - 0.5, top: 122,
                     width: 1, height: isHour ? 6 : 3,
                     backgroundColor: C.textMid, opacity: isHour ? 0.6 : 0.3
                   }} />
@@ -2007,7 +2012,7 @@ function ViewMode({ t, C, viewRef, boxes, extEvents, sw, tw, onScroll, onUserScr
 
               {Array.from({ length: 25 }).map((_, h) => (
                 <div key={`lab-${h}`} className="dtb-tnum" style={{
-                  position: 'absolute', left: h * 2 * sw, top: 112,
+                  position: 'absolute', left: PAD + h * 2 * sw, top: 136,
                   transform: 'translateX(-50%)', fontSize: 10,
                   color: C.text, fontWeight: 500, whiteSpace: 'nowrap'
                 }}>
@@ -2025,11 +2030,11 @@ function ViewMode({ t, C, viewRef, boxes, extEvents, sw, tw, onScroll, onUserScr
               }).filter((m, i, arr) => arr.indexOf(m) === i).map(m => (
                 <div key={`bm-${m}`}>
                   <div style={{
-                    position: 'absolute', left: (m / MIN_PER_SLOT) * sw - 0.5, top: 98,
+                    position: 'absolute', left: PAD + (m / MIN_PER_SLOT) * sw - 0.5, top: 122,
                     width: 1, height: 6, backgroundColor: C.textMid, opacity: 0.6,
                   }} />
                   <div className="dtb-tnum" style={{
-                    position: 'absolute', left: (m / MIN_PER_SLOT) * sw, top: 112,
+                    position: 'absolute', left: PAD + (m / MIN_PER_SLOT) * sw, top: 136,
                     transform: 'translateX(-50%)', fontSize: 10,
                     color: C.text, fontWeight: 500, whiteSpace: 'nowrap',
                   }}>
