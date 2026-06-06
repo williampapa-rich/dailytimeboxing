@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { X, Palette, Clock, BarChart3, User, HelpCircle, LogOut, Globe, ChevronLeft, ChevronRight, Calendar } from 'lucide-react';
+import { X, Palette, Clock, User, HelpCircle, LogOut, Globe, ChevronLeft, ChevronRight, Calendar } from 'lucide-react';
 import { useAuthUser } from './auth.js';
 import { signInWithGoogle, signOut } from './supabase.js';
 import { THEMES } from './themes.js';
@@ -133,7 +133,6 @@ function SectionContent({ section, C, t, lang, setLang, themeId, onChangeTheme, 
     </div>
   );
   if (section === 'clock') return (<div><h2 style={{ fontSize: 18, fontWeight: 700, margin: '0 0 20px', color: C.text }}>{t.clock}</h2><p style={{ color: C.textMid, fontSize: 13 }}>{t.comingSoon}</p></div>);
-  if (section === 'stats') return (<div><h2 style={{ fontSize: 18, fontWeight: 700, margin: '0 0 20px', color: C.text }}>{t.stats}</h2><p style={{ color: C.textMid, fontSize: 13 }}>{t.comingSoon}</p></div>);
   if (section === 'support') return (
     <div>
       <h2 style={{ fontSize: 18, fontWeight: 700, margin: '0 0 20px', color: C.text }}>{t.support}</h2>
@@ -264,7 +263,6 @@ export default function SettingsPanel({ isOpen, onClose, themeId, onChangeTheme,
     { key: 'themes', icon: Palette, label: t.themes },
     { key: 'calendar', icon: Calendar, label: t.calendarTitle },
     { key: 'clock', icon: Clock, label: t.clock },
-    { key: 'stats', icon: BarChart3, label: t.stats },
     { key: 'support', icon: HelpCircle, label: t.support },
     { key: 'language', icon: Globe, label: t.language },
   ];

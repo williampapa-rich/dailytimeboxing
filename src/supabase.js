@@ -242,6 +242,27 @@ function localRemove(key) {
   try { localStorage.removeItem('dtb:' + key); } catch (e) {}
 }
 
+export async function fetchTimeboxRange(startDateStr, endDateStr) {
+  const uid = (await supabase.auth.getUser()).data.user?.id;
+  if (!uid) return {};
+  const { data, error } = await supabase
+    .from('timeboxes')
+    .select('date,data')
+    .eq('user_id', uid)
+    .gte('date', startDateStr)
+    .lte('date', endDateStr);
+  if (error || !data) return {};
+  const result = {};
+  for (const row of data) {
+    try {
+      result[row.date] = Array.isArray(row.data) ? row.data : JSON.parse(row.data);
+    } catch (e) {
+      result[row.date] = [];
+    }
+  }
+  return result;
+}
+
 export const cloudStorage = {
   async get(key) {
     const uid = await userIdSync();

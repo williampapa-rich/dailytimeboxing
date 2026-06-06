@@ -7,7 +7,7 @@ const STEPS_KO = [
   { emoji: '👀', title: '뷰 모드', desc: '편집 화면에서 우하단 👀 버튼을 누르면\n뷰 모드로 전환됩니다.\n현재 진행 중인 일정과 남은 시간을\n한눈에 확인할 수 있어요.' },
   { emoji: '⚙️', title: '설정', desc: '테마, 언어, 투명도를\n원하는 대로 커스터마이즈하세요.' },
   { emoji: '🎵', title: '음악', desc: 'Spotify와 YouTube로\n집중 음악을 들으며 작업하세요.\n(데스크톱 전용)' },
-  { emoji: '···', title: '더보기 메뉴', desc: '우하단 ··· 버튼을 누르면\n📅 날짜 선택/이동\n🔗 친구에게 공유하기\n❓ 이 튜토리얼 다시보기\n를 할 수 있어요!' },
+  { emoji: '···', title: '더보기 메뉴', desc: '우하단 ··· 버튼을 누르면\n📅 날짜 선택/이동\n📊 완료 통계 보기\n🔗 친구에게 공유하기\n❓ 이 튜토리얼 다시보기\n를 할 수 있어요!' },
   { emoji: '🚀', title: '시작하기', desc: '지금 바로 첫 타임박스를 만들어보세요!\n**Google 로그인하면 여러 기기에서 동기화됩니다.**\n(설정 → Google로 시작하기)' },
 ];
 
@@ -17,7 +17,7 @@ const STEPS_EN = [
   { emoji: '👀', title: 'View Mode', desc: 'In edit mode, tap 👀 at bottom-right\nto switch to view mode.\nSee your current schedule\nand remaining time at a glance.' },
   { emoji: '⚙️', title: 'Settings', desc: 'Customize themes, language,\nand opacity to your liking.' },
   { emoji: '🎵', title: 'Music', desc: 'Listen to focus music with\nSpotify and YouTube.\n(Desktop only)' },
-  { emoji: '···', title: 'More Menu', desc: 'Tap ··· at bottom-right to:\n📅 Pick a date\n🔗 Share with friends\n❓ Replay this tutorial' },
+  { emoji: '···', title: 'More Menu', desc: 'Tap ··· at bottom-right to:\n📅 Pick a date\n📊 View completion stats\n🔗 Share with friends\n❓ Replay this tutorial' },
   { emoji: '🚀', title: 'Get Started', desc: 'Create your first timebox now!\n**Sign in with Google to sync across devices.**\n(Settings → Start with Google)' },
 ];
 
@@ -27,7 +27,7 @@ const STEPS_ZH = [
   { emoji: '👀', title: '查看模式', desc: '在编辑模式下，点击右下角 👀\n即可切换到查看模式。\n一目了然地查看当前日程\n和剩余时间。' },
   { emoji: '⚙️', title: '设置', desc: '自定义主题、语言\n和不透明度。' },
   { emoji: '🎵', title: '音乐', desc: '用Spotify和YouTube\n播放专注音乐。\n（仅限桌面端）' },
-  { emoji: '···', title: '更多菜单', desc: '点击右下角 ··· 可以：\n📅 选择日期\n🔗 分享给朋友\n❓ 重新查看本教程' },
+  { emoji: '···', title: '更多菜单', desc: '点击右下角 ··· 可以：\n📅 选择日期\n📊 查看完成统计\n🔗 分享给朋友\n❓ 重新查看本教程' },
   { emoji: '🚀', title: '开始', desc: '立即创建第一个时间盒！\n**用Google登录可在多设备同步。**\n(设置 → 使用Google登录)' },
 ];
 
@@ -37,7 +37,7 @@ const STEPS_ES = [
   { emoji: '👀', title: 'Modo vista', desc: 'En modo edición, toca 👀 abajo a la derecha\npara cambiar al modo vista.\nVe tu horario actual\ny el tiempo restante de un vistazo.' },
   { emoji: '⚙️', title: 'Ajustes', desc: 'Personaliza temas, idioma\ny opacidad a tu gusto.' },
   { emoji: '🎵', title: 'Música', desc: 'Escucha música de concentración\ncon Spotify y YouTube.\n(Solo escritorio)' },
-  { emoji: '···', title: 'Menú más', desc: 'Toca ··· abajo a la derecha para:\n📅 Elegir fecha\n🔗 Compartir con amigos\n❓ Ver este tutorial de nuevo' },
+  { emoji: '···', title: 'Menú más', desc: 'Toca ··· abajo a la derecha para:\n📅 Elegir fecha\n📊 Ver estadísticas\n🔗 Compartir con amigos\n❓ Ver este tutorial de nuevo' },
   { emoji: '🚀', title: 'Empezar', desc: '¡Crea tu primer timebox ahora!\n**Inicia sesión con Google para sincronizar.**\n(Ajustes → Iniciar con Google)' },
 ];
 
@@ -47,7 +47,7 @@ const STEPS_JA = [
   { emoji: '👀', title: 'ビューモード', desc: '編集モードで右下の 👀 をタップすると\nビューモードに切り替わります。\n現在のスケジュールと残り時間を\n一目で確認できます。' },
   { emoji: '⚙️', title: '設定', desc: 'テーマ、言語、不透明度を\nお好みにカスタマイズ。' },
   { emoji: '🎵', title: '音楽', desc: 'SpotifyとYouTubeで\n集中音楽を聴きながら作業。\n（デスクトップ専用）' },
-  { emoji: '···', title: 'もっとメニュー', desc: '右下の ··· をタップすると：\n📅 日付を選択\n🔗 友達にシェア\n❓ このチュートリアルを再表示' },
+  { emoji: '···', title: 'もっとメニュー', desc: '右下の ··· をタップすると：\n📅 日付を選択\n📊 完了の統計を見る\n🔗 友達にシェア\n❓ このチュートリアルを再表示' },
   { emoji: '🚀', title: '始めましょう', desc: '今すぐ最初のタイムボックスを作成！\n**Googleログインで複数デバイスと同期。**\n(設定 → Googleで始める)' },
 ];
 
@@ -56,15 +56,15 @@ const ALL_STEPS = { ko: STEPS_KO, en: STEPS_EN, zh: STEPS_ZH, es: STEPS_ES, ja: 
 // Button positions: flex row right:20, gap:8, each 48px
 // [EditView 48] 8 [Settings 48] 8 [FAB 48] — FAB rightmost
 // FAB right edge = 20, Settings right edge = 76, EditView right edge = 132
-// FAB items: 3 items × 56px spacing + FAB btn = bottom 20 to top of last item
-// items at bottom: 56+0*56=76, 56+1*56=132, 56+2*56=188 (top of highest = 188+48=236 from bottom)
+// FAB items: 4 items × 56px spacing + FAB btn = bottom 20 to top of last item
+// items at bottom: 56+0*56=76 … 56+3*56=224 (top of highest = 224+48=272 from bottom)
 const SPOTLIGHTS = [
   null,                                              // 0: welcome
   { bottom: 20, right: 132, w: 48, h: 48 },         // 1: edit btn
   { bottom: 20, right: 132, w: 48, h: 48 },         // 2: view btn
   { bottom: 20, right: 76, w: 48, h: 48 },          // 3: settings
   { bottom: 20, left: 20, w: 48, h: 48 },           // 4: music
-  { bottom: 16, right: 16, w: 56, h: 224 },         // 5: FAB + 3 items (48+56*3)
+  { bottom: 16, right: 16, w: 56, h: 280 },         // 5: FAB + 4 items (48+56*4)
   null,                                              // 6: get started
 ];
 

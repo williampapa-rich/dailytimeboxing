@@ -1,7 +1,8 @@
 import { useState, useEffect, useLayoutEffect, useRef, useCallback } from "react";
 import { Pencil, Eye, Trash2, Plus, Save, Check, X, ChevronLeft, ChevronRight, Calendar, MoreHorizontal } from "lucide-react";
-import { Settings, Share2, Link, MessageCircle, HelpCircle, Maximize, Minimize } from 'lucide-react';
+import { Settings, Share2, Link, MessageCircle, HelpCircle, Maximize, Minimize, BarChart3 } from 'lucide-react';
 import SettingsPanel from "./SettingsPanel.jsx";
+import { StatsPopup } from "./StatsPanel.jsx";
 import { THEMES, DEFAULT_THEME } from './themes.js';
 import MusicPlayer from "./MusicPlayer.jsx";
 import { useI18n } from './i18n.js';
@@ -97,15 +98,16 @@ const newId = (p = 'id') => `${p}-${Date.now()}-${Math.random().toString(36).sli
 
 // Migrate old slot-based boxes to minute-based
 const migrateBox = (b) => {
-  if (typeof b.start === 'number' && typeof b.end === 'number') return b;
+  if (typeof b.start === 'number' && typeof b.end === 'number') return { ...b, done: b.done ?? false };
   if (typeof b.startSlot === 'number' && typeof b.endSlot === 'number') {
     return {
       ...b,
       start: b.startSlot * MIN_PER_SLOT,
       end: (b.endSlot + 1) * MIN_PER_SLOT,
+      done: b.done ?? false,
     };
   }
-  return b;
+  return { ...b, done: b.done ?? false };
 };
 
 const URGENT_THRESHOLD_SEC = 300;
@@ -176,10 +178,11 @@ export default function App() {
   const [fTasks, setFTasks] = useState([{ id: newId('t'), text: '', done: false }]);
   const [error, setError] = useState('');
 
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
 
   const viewElRef = useRef(null);
   const [calendarOpen, setCalendarOpen] = useState(false);
+  const [statsOpen, setStatsOpen] = useState(false);
   const [shareModalOpen, setShareModalOpen] = useState(false);
   const viewObserverRef = useRef(null);
   const lastScrollRef = useRef(0);
@@ -667,6 +670,10 @@ export default function App() {
     }));
   };
 
+  const toggleBoxDone = (boxId) => {
+    save(boxes.map(b => b.id !== boxId ? b : { ...b, done: !b.done }));
+  };
+
   // Display range uses form fields when sel is open
   const displayRange = (() => {
     if (drag.anchor !== null) {
@@ -981,6 +988,7 @@ export default function App() {
             tw={tw}
             onScroll={onScroll}
             toggleTaskInBox={toggleTaskInBox}
+            toggleBoxDone={toggleBoxDone}
             isViewingToday={isToday(selectedDate)}
             selectedDate={selectedDate}
           />
@@ -1047,6 +1055,7 @@ export default function App() {
           {/* Speed dial items — upward */}
           {[
             { icon: <Calendar size={18} />, onClick: () => { setCalendarOpen(true); setFabOpen(false); }},
+            { icon: <BarChart3 size={18} />, onClick: () => { setStatsOpen(true); setFabOpen(false); }},
             { icon: <Share2 size={18} />, onClick: () => { setShareModalOpen(true); setFabOpen(false); }},
             { icon: <HelpCircle size={18} />, onClick: () => { setTutorialOpen(true); setFabOpen(false); }},
           ].map((item, i) => (
@@ -1070,6 +1079,8 @@ export default function App() {
       </div>
       {/* Calendar popup */}
       {calendarOpen && <CalendarPopup C={C} t={t} selectedDate={selectedDate} onSelect={(d) => { setSelectedDate(d); setCalendarOpen(false); }} onClose={() => setCalendarOpen(false)} />}
+      {/* Stats popup */}
+      {statsOpen && <StatsPopup C={C} t={t} lang={lang} onClose={() => setStatsOpen(false)} />}
 
       {/* Share modal */}
       <div onClick={() => setShareModalOpen(false)} style={{
@@ -1642,7 +1653,7 @@ function EditView({
   );
 }
 
-function ViewMode({ t, C, viewRef, boxes, extEvents, sw, tw, onScroll, toggleTaskInBox, isViewingToday, selectedDate }) {
+function ViewMode({ t, C, viewRef, boxes, extEvents, sw, tw, onScroll, toggleTaskInBox, toggleBoxDone, isViewingToday, selectedDate }) {
   const timer = isViewingToday ? getTimerInfo(boxes) : { type: 'idle' };
   const urgent = !!timer.urgent && (timer.type === 'current' || timer.type === 'next');
   const urgentColor = C.indicator;
@@ -1863,6 +1874,13 @@ function ViewMode({ t, C, viewRef, boxes, extEvents, sw, tw, onScroll, toggleTas
                 const txt = getContrastText(box.color);
                 const taskCount = box.tasks?.length || 0;
                 const doneCount = box.tasks?.filter(t => t.done).length || 0;
+                // 완료 체크 버튼 노출 여부 판정
+                const todayStr = toDateString(new Date());
+                const selStr = toDateString(selectedDate);
+                const isPast = selStr < todayStr;
+                const showDoneBtn = isPast
+                  ? true
+                  : (isViewingToday ? box.end <= getCurrentMin() : false);
                 return (
                   <div
                     key={box.id}
@@ -1873,17 +1891,40 @@ function ViewMode({ t, C, viewRef, boxes, extEvents, sw, tw, onScroll, toggleTas
                       backgroundColor: box.color, color: txt,
                       borderRadius: 6, padding: 8,
                       boxShadow: '0 1px 2px rgba(0,0,0,0.12)',
-                      overflow: 'hidden'
+                      overflow: 'hidden',
+                      opacity: box.done ? 0.65 : 1,
+                      transition: 'opacity 0.2s',
                     }}
                   >
                     <div className="dtb-tnum" style={{ fontSize: 9, opacity: 0.9, lineHeight: 1.2, fontWeight: 500 }}>
                       {formatRange(box.start, box.end)}
                     </div>
-                    <div style={{ fontWeight: 700, fontSize: 12, marginTop: 2, lineHeight: 1.25 }}>{box.title}</div>
+                    <div style={{ fontWeight: 700, fontSize: 12, marginTop: 2, lineHeight: 1.25, paddingRight: showDoneBtn ? 20 : 0 }}>{box.title}</div>
                     {taskCount > 0 && (
                       <div className="dtb-tnum" style={{ fontSize: 10, opacity: 0.9, fontWeight: 600, marginTop: 3 }}>
                         ☐ {doneCount}/{taskCount}
                       </div>
+                    )}
+                    {showDoneBtn && (
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); toggleBoxDone(box.id); }}
+                        title={box.done ? '완료 취소' : '완료 표시'}
+                        style={{
+                          position: 'absolute', top: 6, right: 6,
+                          width: 18, height: 18,
+                          borderRadius: '50%',
+                          border: `1.5px solid ${txt}`,
+                          backgroundColor: box.done ? txt : 'transparent',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          cursor: 'pointer', padding: 0,
+                          opacity: box.done ? 1 : 0.7,
+                          transition: 'all 0.15s',
+                          flexShrink: 0,
+                        }}
+                      >
+                        {box.done && <Check size={11} color={box.color} strokeWidth={3} />}
+                      </button>
                     )}
                   </div>
                 );
