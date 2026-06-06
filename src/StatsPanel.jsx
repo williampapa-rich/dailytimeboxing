@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { fetchTimeboxRange } from './supabase.js';
 import { useAuthUser } from './auth.js';
 
@@ -265,30 +265,36 @@ export function StatsSection({ C, t, lang, isLoggedIn }) {
   );
 }
 
-// Independent popup overlay (CalendarPopup pattern), opened from the FAB.
-export function StatsPopup({ C, t, lang, onClose }) {
+// Full-screen view (like view/edit modes), opened from the FAB. Reuses the
+// view↔edit transition animation and provides a back button in the header.
+export function StatsView({ C, t, lang, onBack }) {
   const { user, loaded, isAnonymous } = useAuthUser();
   const isLoggedIn = loaded && !!user && !isAnonymous;
   return (
-    <>
-      <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 200 }} />
-      <div onClick={(e) => e.stopPropagation()} style={{
-        position: 'fixed', bottom: 80, right: 80, zIndex: 201,
-        width: 320, maxWidth: 'calc(100vw - 40px)', maxHeight: 'calc(100dvh - 140px)', overflowY: 'auto',
-        padding: 20, borderRadius: 14,
-        backgroundColor: C.card, color: C.text, border: `1px solid ${C.border}`,
-        backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
-        boxShadow: '0 16px 48px rgba(0,0,0,0.3)',
-        animation: 'dtb-fade-in 0.2s ease',
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-          <h2 style={{ fontSize: 18, fontWeight: 700, margin: 0, color: C.text }}>{t.stats}</h2>
-          <button onClick={onClose} aria-label={t.close || 'Close'} style={{ border: 'none', background: 'none', color: C.textMid, cursor: 'pointer', padding: 4, display: 'flex' }}>
-            <X size={18} />
-          </button>
-        </div>
-        <StatsSection C={C} t={t} lang={lang} isLoggedIn={isLoggedIn} />
+    <div style={{
+      display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0,
+      backgroundColor: C.card, borderRadius: 12, border: `1px solid ${C.border}`,
+      overflow: 'hidden', animation: 'dtb-fade-in 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
+    }}>
+      {/* Header: back + title */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '14px 16px', borderBottom: `1px solid ${C.border}`, flexShrink: 0 }}>
+        <button
+          onClick={onBack}
+          aria-label={t.close || 'Close'}
+          style={{ width: 32, height: 32, borderRadius: 8, border: 'none', background: 'none', color: C.textMid, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.12s' }}
+          onMouseEnter={e => e.currentTarget.style.color = C.text}
+          onMouseLeave={e => e.currentTarget.style.color = C.textMid}
+        >
+          <ChevronLeft size={20} />
+        </button>
+        <h2 style={{ fontSize: 17, fontWeight: 700, margin: 0, color: C.text }}>{t.stats}</h2>
       </div>
-    </>
+      {/* Body */}
+      <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: 20 }}>
+        <div style={{ maxWidth: 420, margin: '0 auto' }}>
+          <StatsSection C={C} t={t} lang={lang} isLoggedIn={isLoggedIn} />
+        </div>
+      </div>
+    </div>
   );
 }

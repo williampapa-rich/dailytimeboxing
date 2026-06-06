@@ -2,7 +2,7 @@ import { useState, useEffect, useLayoutEffect, useRef, useCallback } from "react
 import { Pencil, Eye, Trash2, Plus, Save, Check, X, ChevronLeft, ChevronRight, Calendar, MoreHorizontal } from "lucide-react";
 import { Settings, Share2, Link, MessageCircle, HelpCircle, Maximize, Minimize, BarChart3 } from 'lucide-react';
 import SettingsPanel from "./SettingsPanel.jsx";
-import { StatsPopup } from "./StatsPanel.jsx";
+import { StatsView } from "./StatsPanel.jsx";
 import { THEMES, DEFAULT_THEME } from './themes.js';
 import MusicPlayer from "./MusicPlayer.jsx";
 import { useI18n } from './i18n.js';
@@ -182,7 +182,7 @@ export default function App() {
 
   const viewElRef = useRef(null);
   const [calendarOpen, setCalendarOpen] = useState(false);
-  const [statsOpen, setStatsOpen] = useState(false);
+  const statsPrevModeRef = useRef('view');
   const [shareModalOpen, setShareModalOpen] = useState(false);
   const viewObserverRef = useRef(null);
   const lastScrollRef = useRef(0);
@@ -674,6 +674,15 @@ export default function App() {
     save(boxes.map(b => b.id !== boxId ? b : { ...b, done: !b.done }));
   };
 
+  const openStats = () => {
+    if (mode !== 'stats') statsPrevModeRef.current = mode;
+    if (mode === 'edit') closeEdit();
+    setMode('stats');
+  };
+  const closeStats = () => {
+    setMode(statsPrevModeRef.current === 'edit' ? 'view' : statsPrevModeRef.current);
+  };
+
   // Display range uses form fields when sel is open
   const displayRange = (() => {
     if (drag.anchor !== null) {
@@ -759,7 +768,7 @@ export default function App() {
   };
 
   return (
-    <div className="dtb-root" onClick={() => fabOpen && setFabOpen(false)} style={{ height: '100dvh', display: 'flex', flexDirection: 'column', overflow: mode === 'edit' ? 'hidden' : 'auto', backgroundColor: C.bg, color: C.text, colorScheme: C.scheme, position: 'relative', opacity: loading ? 0 : 1, transition: 'opacity 0.4s ease' }}>
+    <div className="dtb-root" onClick={() => fabOpen && setFabOpen(false)} style={{ height: '100dvh', display: 'flex', flexDirection: 'column', overflow: mode === 'view' ? 'auto' : 'hidden', backgroundColor: C.bg, color: C.text, colorScheme: C.scheme, position: 'relative', opacity: loading ? 0 : 1, transition: 'opacity 0.4s ease' }}>
       {/* Background image */}
       <div style={{
         position: 'fixed', inset: 0, zIndex: 0,
@@ -940,9 +949,11 @@ export default function App() {
         {isFullscreen ? <Minimize size={16} /> : <Maximize size={16} />}
       </button>
 
-      <div style={{ flex: 1, minHeight: 0, maxWidth: 1032, margin: '0 auto', padding: window.matchMedia?.('(max-width: 768px)')?.matches ? '48px 16px 88px' : (mode === 'edit' ? '16px 24px 76px' : '16px 24px'), width: '100%', position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', justifyContent: mode === 'view' ? (window.matchMedia?.('(max-width: 768px)')?.matches ? 'flex-start' : 'center') : 'stretch', transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)' }}>
+      <div style={{ flex: 1, minHeight: 0, maxWidth: 1032, margin: '0 auto', padding: window.matchMedia?.('(max-width: 768px)')?.matches ? '48px 16px 88px' : (mode !== 'view' ? '16px 24px 76px' : '16px 24px'), width: '100%', position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', justifyContent: mode === 'view' ? (window.matchMedia?.('(max-width: 768px)')?.matches ? 'flex-start' : 'center') : 'stretch', transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)' }}>
         {loading ? (
           <div style={{ textAlign: 'center', color: C.textMid, padding: '80px 0' }}>{t.loading}</div>
+        ) : mode === 'stats' ? (
+          <StatsView C={C} t={t} lang={lang} onBack={closeStats} />
         ) : mode === 'edit' ? (
           <EditView
             t={t}
@@ -1001,7 +1012,7 @@ export default function App() {
       <div style={{ position: 'fixed', bottom: 20, right: 20, zIndex: 51, display: 'flex', alignItems: 'center', gap: 8 }}>
         {/* Edit/View toggle */}
         <button
-          onClick={() => { if (mode === 'view') setMode('edit'); else { setMode('view'); closeEdit(); } }}
+          onClick={() => { if (mode === 'view') setMode('edit'); else if (mode === 'stats') closeStats(); else { setMode('view'); closeEdit(); } }}
           title={mode === 'view' ? t.edit : t.view}
           className="dtb-fab-btn"
           style={{
@@ -1055,7 +1066,7 @@ export default function App() {
           {/* Speed dial items — upward */}
           {[
             { icon: <Calendar size={18} />, onClick: () => { setCalendarOpen(true); setFabOpen(false); }},
-            { icon: <BarChart3 size={18} />, onClick: () => { setStatsOpen(true); setFabOpen(false); }},
+            { icon: <BarChart3 size={18} />, onClick: () => { openStats(); setFabOpen(false); }},
             { icon: <Share2 size={18} />, onClick: () => { setShareModalOpen(true); setFabOpen(false); }},
             { icon: <HelpCircle size={18} />, onClick: () => { setTutorialOpen(true); setFabOpen(false); }},
           ].map((item, i) => (
@@ -1079,8 +1090,6 @@ export default function App() {
       </div>
       {/* Calendar popup */}
       {calendarOpen && <CalendarPopup C={C} t={t} selectedDate={selectedDate} onSelect={(d) => { setSelectedDate(d); setCalendarOpen(false); }} onClose={() => setCalendarOpen(false)} />}
-      {/* Stats popup */}
-      {statsOpen && <StatsPopup C={C} t={t} lang={lang} onClose={() => setStatsOpen(false)} />}
 
       {/* Share modal */}
       <div onClick={() => setShareModalOpen(false)} style={{
