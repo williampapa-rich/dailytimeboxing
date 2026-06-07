@@ -199,10 +199,37 @@ export async function updateEvent(eventId, dateStr, box, etag) {
 }
 
 export async function deleteEvent(eventId, etag) {
-  return api('/calendars/primary/events/' + encodeURIComponent(eventId), {
-    method: 'DELETE',
-    headers: { ...(etag ? { 'If-Match': etag } : {}) },
-  });
+  const path = '/calendars/primary/events/' + encodeURIComponent(eventId);
+  try {
+    return await api(path, {
+      method: 'DELETE',
+      headers: { ...(etag ? { 'If-Match': etag } : {}) },
+    });
+  } catch (e) {
+    // 410/404: already gone on Google → treat as a successful delete.
+    if (e?.status === 410 || e?.status === 404) return null;
+    // 412: etag stale (event changed since we last synced). Re-fetch the
+    // latest etag and retry once with it; if it's gone now, that's fine too.
+    if (e?.status === 412) {
+      let latest;
+      try {
+        latest = await getEvent(eventId);
+      } catch (e2) {
+        if (e2?.status === 410 || e2?.status === 404) return null;
+        throw e2;
+      }
+      try {
+        return await api(path, {
+          method: 'DELETE',
+          headers: { ...(latest?.etag ? { 'If-Match': latest.etag } : {}) },
+        });
+      } catch (e3) {
+        if (e3?.status === 410 || e3?.status === 404) return null;
+        throw e3;
+      }
+    }
+    throw e;
+  }
 }
 
 export async function getEvent(eventId) {

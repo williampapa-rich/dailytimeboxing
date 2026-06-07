@@ -166,6 +166,10 @@ export default function App() {
   const [boxes, setBoxes] = useState([]);
   const boxesRef = useRef([]);
   useEffect(() => { boxesRef.current = boxes; }, [boxes]);
+  // Google event ids we've deleted locally — suppressed from the read-only
+  // overlay so a delete-in-flight (or a failed delete) can't re-appear as a
+  // grey box on the next poll.
+  const deletedGidsRef = useRef(new Set());
   const [loading, setLoading] = useState(true);
   const [, setTick] = useState(0);
 
@@ -338,9 +342,11 @@ export default function App() {
         window.storage.set(getDateKey(selectedDate), JSON.stringify(nextBoxes)).catch(() => {});
       }
 
-      // Read-only overlay = Google events NOT already linked to a local box (no dupes).
+      // Read-only overlay = Google events NOT already linked to a local box
+      // and NOT pending/failed local deletion (no dupes, no zombie re-appear).
       const linkedGids = new Set(boxesRef.current.filter(b => b.googleEventId).map(b => b.googleEventId));
-      const overlay = events.filter(e => !linkedGids.has(e.googleEventId));
+      const overlay = events.filter(e =>
+        !linkedGids.has(e.googleEventId) && !deletedGidsRef.current.has(e.googleEventId));
       if (!signal?.cancelled) setExtEvents(overlay);
     } catch (e) {
       if (!signal?.cancelled) {
@@ -411,11 +417,17 @@ export default function App() {
 
   const pushDelete = async (box) => {
     if (!gcalSync || !box?.googleEventId) return;
+    // Suppress this gid from the overlay immediately so it can't pop back as a
+    // grey box while the delete is in flight (or if it fails).
+    deletedGidsRef.current.add(box.googleEventId);
     try {
       if (!(await gcal.isConnected())) return;
       await gcal.deleteEvent(box.googleEventId, box.gcalEtag);
+      // Confirmed gone on Google → no longer need to suppress it.
+      deletedGidsRef.current.delete(box.googleEventId);
     } catch (e) {
       if (e?.code === 'reauth') setGcalReauth(true);
+      // Keep it suppressed so a failed delete doesn't re-appear locally.
       console.warn('gcal pushDelete error:', e);
     }
   };
