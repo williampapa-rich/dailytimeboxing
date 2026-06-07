@@ -64,6 +64,7 @@ async function handleOAuthCallbacks() {
   const code = params.get('code');
   if (code && state.startsWith('spotify:')) {
     try {
+      await ensureSession();
       await spotify.handleCallback(code, state);
     } catch (e) {
       console.error('[spotify callback]', e);
@@ -73,6 +74,7 @@ async function handleOAuthCallbacks() {
   }
   if (window.location.hash.includes('access_token=') && window.location.hash.includes('youtube')) {
     try {
+      await ensureSession();
       await youtube.handleCallbackHash(window.location.hash);
     } catch (e) {
       console.error('[youtube callback]', e);
@@ -86,6 +88,8 @@ async function handleOAuthCallbacks() {
     : '';
   if (hashState.startsWith('gcal:')) {
     try {
+      // Token storage needs a Supabase user — ensure the session exists before saving.
+      await ensureSession();
       await gcal.handleCallbackHash(window.location.hash);
     } catch (e) {
       console.error('[gcal callback]', e);
