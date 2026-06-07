@@ -1,5 +1,5 @@
 import { useState, useEffect, useLayoutEffect, useRef, useCallback } from "react";
-import { Pencil, Eye, Trash2, Plus, Save, Check, X, ChevronLeft, ChevronRight, Calendar, MoreHorizontal, Download } from "lucide-react";
+import { Pencil, Eye, Trash2, Plus, Save, Check, X, ChevronLeft, ChevronRight, Calendar, MoreHorizontal, Download, AlertTriangle } from "lucide-react";
 import { Settings, Share2, Link, MessageCircle, HelpCircle, Maximize, Minimize, BarChart3 } from 'lucide-react';
 import SettingsPanel from "./SettingsPanel.jsx";
 import { StatsView } from "./StatsPanel.jsx";
@@ -175,6 +175,8 @@ export default function App() {
 
   const [gcalSync, setGcalSync] = useState(false); // unified two-way sync (read + write)
   const [gcalReauth, setGcalReauth] = useState(false); // show "reconnect" banner
+  // Two-way conflict: { box, remote } — local edit collided with a Google edit.
+  const [gcalConflict, setGcalConflict] = useState(null);
   const [extEvents, setExtEvents] = useState([]);
 
   const [drag, setDrag] = useState({ anchor: null, current: null, didDrag: false });
@@ -320,14 +322,17 @@ export default function App() {
       let nextBoxes = boxesRef.current;
       let changed = false;
       for (const b of linked) {
+        // Never auto-reconcile a box with unsynced local edits (pending) or one
+        // awaiting the user's conflict decision (conflict) — protects local data.
+        const locked = b.syncState === 'pending' || b.syncState === 'conflict';
         const ev = byGid.get(b.googleEventId);
         if (!ev) {
-          // Deleted on Google → remove the linked local box (only if not mid-edit).
-          if (b.syncState !== 'pending') {
+          // Deleted on Google → remove the linked local box (only if not locked).
+          if (!locked) {
             nextBoxes = nextBoxes.filter(x => x.id !== b.id);
             changed = true;
           }
-        } else if (b.syncState !== 'pending' && ev.gcalEtag && ev.gcalEtag !== b.gcalEtag) {
+        } else if (!locked && ev.gcalEtag && ev.gcalEtag !== b.gcalEtag) {
           // Changed on Google → pull the new values into the local box.
           nextBoxes = nextBoxes.map(x => x.id !== b.id ? x : {
             ...x, start: ev.start, end: ev.end, title: ev.title,
@@ -409,9 +414,60 @@ export default function App() {
         lastSyncedAt: new Date().toISOString(),
       });
     } catch (e) {
-      if (e?.code === 'reauth') setGcalReauth(true);
+      if (e?.code === 'reauth') { setGcalReauth(true); patchBoxMeta(box.id, { syncState: 'pending' }); return; }
+      // 412: etag stale → the event was also changed on Google. Real two-way
+      // conflict. Fetch Google's current version and ask the user to choose
+      // (no silent auto-merge / auto-overwrite).
+      if (e?.status === 412 && box.googleEventId) {
+        try {
+          const remote = await gcal.getEvent(box.googleEventId);
+          patchBoxMeta(box.id, { syncState: 'conflict' });
+          setGcalConflict({ box, remote });
+          return;
+        } catch (e2) {
+          // Couldn't fetch remote → fall through to pending (retry later).
+          console.warn('gcal conflict fetch error:', e2);
+        }
+      }
       patchBoxMeta(box.id, { syncState: 'pending' });
       console.warn('gcal pushBox error:', e);
+    }
+  };
+
+  // Resolve a two-way conflict per the user's choice.
+  // 'mine'  → force-push the local box using the remote's latest etag.
+  // 'theirs'→ pull Google's current values into the local box.
+  const resolveConflict = async (choice) => {
+    const conflict = gcalConflict;
+    setGcalConflict(null);
+    if (!conflict) return;
+    const { box, remote } = conflict;
+    if (choice === 'theirs') {
+      const dateStr = toDateString(selectedDate);
+      const rb = gcal.eventToBoxFields(remote, dateStr) || {};
+      patchBoxMeta(box.id, {
+        ...rb,
+        gcalEtag: remote.etag || box.gcalEtag || null,
+        syncState: 'synced',
+        lastSyncedAt: new Date().toISOString(),
+      });
+    } else {
+      // Keep mine: push using the freshly-fetched etag so If-Match succeeds.
+      const fresh = boxesRef.current.find(b => b.id === box.id) || box;
+      await pushBox({ ...fresh, gcalEtag: remote.etag || fresh.gcalEtag });
+    }
+  };
+
+  // Re-open the conflict dialog for a box left in 'conflict' state.
+  const reopenConflict = async (box) => {
+    if (!box?.googleEventId) return;
+    try {
+      const remote = await gcal.getEvent(box.googleEventId);
+      setGcalConflict({ box, remote });
+    } catch (e) {
+      // Remote gone → treat the local edit as the surviving version.
+      patchBoxMeta(box.id, { syncState: 'pending' });
+      flushPending();
     }
   };
 
@@ -974,6 +1030,36 @@ export default function App() {
           <button onClick={() => setGcalReauth(false)} aria-label={t.close || 'Close'} style={{ background: 'transparent', border: 'none', color: '#fff', cursor: 'pointer', display: 'flex' }}><X size={16} /></button>
         </div>
       )}
+      {gcalConflict && (() => {
+        const dateStr = toDateString(selectedDate);
+        const mine = gcalConflict.box;
+        const theirs = gcal.eventToBoxFields(gcalConflict.remote, dateStr) || {};
+        const Side = ({ label, b, accent }) => (
+          <div style={{ flex: 1, minWidth: 0, padding: 12, borderRadius: 10, backgroundColor: C.cardAlt }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: accent, marginBottom: 6 }}>{label}</div>
+            <div style={{ fontWeight: 700, fontSize: 14, color: C.text, wordBreak: 'break-word' }}>{b.title || '—'}</div>
+            <div className="dtb-tnum" style={{ fontSize: 12, color: C.textMid, marginTop: 2 }}>{formatRange(b.start, b.end)}</div>
+            {b.description ? <div style={{ fontSize: 12, color: C.textMid, marginTop: 4, whiteSpace: 'pre-wrap', wordBreak: 'break-word', maxHeight: 80, overflow: 'hidden' }}>{b.description}</div> : null}
+          </div>
+        );
+        return (
+          <div style={{ position: 'fixed', inset: 0, zIndex: 400, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.45)', padding: 16 }}
+               onClick={() => setGcalConflict(null)}>
+            <div onClick={(e) => e.stopPropagation()} style={{ width: '100%', maxWidth: 440, backgroundColor: C.card, borderRadius: 16, padding: 20, boxShadow: '0 12px 40px rgba(0,0,0,0.3)' }}>
+              <div style={{ fontSize: 15, fontWeight: 700, color: C.text, marginBottom: 4 }}>{t.conflictTitle}</div>
+              <div style={{ fontSize: 13, color: C.textMid, marginBottom: 14, lineHeight: 1.4 }}>{t.conflictDesc}</div>
+              <div style={{ display: 'flex', gap: 10, marginBottom: 16 }}>
+                <Side label={t.conflictMineLabel} b={mine} accent={C.accent} />
+                <Side label={t.conflictTheirsLabel} b={theirs} accent={C.indicator} />
+              </div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button onClick={() => resolveConflict('mine')} style={{ flex: 1, padding: '11px 12px', borderRadius: 10, border: 'none', backgroundColor: C.accent, color: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>{t.conflictKeepMine}</button>
+                <button onClick={() => resolveConflict('theirs')} style={{ flex: 1, padding: '11px 12px', borderRadius: 10, border: 'none', backgroundColor: C.cardAlt, color: C.text, fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>{t.conflictUseTheirs}</button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
       {/* Background image */}
       <div style={{
         position: 'fixed', inset: 0, zIndex: 0,
@@ -1166,6 +1252,7 @@ export default function App() {
             boxes={boxes}
             extEvents={extEvents}
             onImportEvent={importAndEdit}
+            onConflictClick={reopenConflict}
             isViewingToday={isToday(selectedDate)}
             displayRange={displayRange}
             rangeConflicts={rangeConflicts}
@@ -1382,7 +1469,7 @@ export default function App() {
 }
 
 function EditView({
-  t, C, boxes, extEvents, onImportEvent, isViewingToday, displayRange, rangeConflicts, onSlotDown, onSlotEnter, onSlotLeave, onBoxMouseDown, boxDrag,
+  t, C, boxes, extEvents, onImportEvent, onConflictClick, isViewingToday, displayRange, rangeConflicts, onSlotDown, onSlotEnter, onSlotLeave, onBoxMouseDown, boxDrag,
   sel, editing, fTitle, setFTitle, fDesc, setFDesc, fColor, setFColor,
   fStart, setFStart, fEnd, setFEnd,
   fTasks, addTask, addTaskAfter, updateTaskText, toggleTask, removeTask,
@@ -1544,10 +1631,25 @@ function EditView({
                     transition: dragging ? 'none' : isPushed ? 'top 0.25s cubic-bezier(0.4,0,0.2,1), transform 0.15s, box-shadow 0.15s' : 'box-shadow 0.15s, top 0.1s, transform 0.15s'
                   }}
                 >
+                  {box.syncState === 'conflict' && (
+                    <button
+                      onMouseDown={(e) => e.stopPropagation()}
+                      onClick={(e) => { e.stopPropagation(); onConflictClick && onConflictClick(box); }}
+                      title={t.conflictTitle}
+                      style={{
+                        position: 'absolute', top: 5, right: 5, zIndex: 2,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        width: 18, height: 18, borderRadius: '50%', border: 'none',
+                        backgroundColor: C.indicator, color: '#fff', cursor: 'pointer', padding: 0,
+                      }}
+                    >
+                      <AlertTriangle size={11} />
+                    </button>
+                  )}
                   <div className="dtb-tnum" style={{ fontSize: 10, opacity: 0.9, fontWeight: 500 }}>
                     {formatRange(effStart, effEnd)}
                   </div>
-                  <div style={{ fontWeight: 700, fontSize: 13, lineHeight: 1.25, marginTop: 2 }}>
+                  <div style={{ fontWeight: 700, fontSize: 13, lineHeight: 1.25, marginTop: 2, paddingRight: box.syncState === 'conflict' ? 18 : 0 }}>
                     {box.title}
                   </div>
                   {taskCount > 0 && (

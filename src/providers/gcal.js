@@ -99,6 +99,32 @@ async function api(path, init = {}) {
   return r.json();
 }
 
+// Convert a raw Google event object into box-shaped fields, anchored to the
+// given day's local midnight (same basis as listEvents). Returns null for
+// all-day events (no dateTime). Used by both listEvents and conflict resolution.
+export function eventToBoxFields(event, dateStr) {
+  if (!event?.start?.dateTime) return null;
+  const [year, month, day] = dateStr.split('-').map(Number);
+  const dayStart = new Date(year, month - 1, day, 0, 0, 0, 0);
+  const dayStartMs = dayStart.getTime();
+
+  const startDt = new Date(event.start.dateTime);
+  const endDt = new Date(event.end?.dateTime || event.start.dateTime);
+  let startMin = Math.round((startDt.getTime() - dayStartMs) / 60000);
+  let endMin = Math.round((endDt.getTime() - dayStartMs) / 60000);
+  startMin = Math.max(0, Math.min(1440, startMin));
+  endMin = Math.max(0, Math.min(1440, endMin));
+  if (endMin <= startMin) endMin = startMin + 15;
+
+  return {
+    start: startMin,
+    end: endMin,
+    title: event.summary || '(제목 없음)',
+    description: event.description || '',
+    color: colorIdToHex(event.colorId) || '#9CA3AF',
+  };
+}
+
 export async function listEvents(dateStr) {
   // dateStr: 'YYYY-MM-DD'
   const [year, month, day] = dateStr.split('-').map(Number);
