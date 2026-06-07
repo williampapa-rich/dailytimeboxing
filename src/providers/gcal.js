@@ -1,7 +1,7 @@
 import { getConnection, saveConnection, removeConnection, isExpired } from './tokens.js';
 
 const CLIENT_ID = '260153692177-3m6mukkrtsnv68hib6uvppbk451a6kg5.apps.googleusercontent.com';
-const SCOPE = 'https://www.googleapis.com/auth/calendar.readonly';
+const SCOPE = 'https://www.googleapis.com/auth/calendar.events';
 const STATE_KEY = 'dtb-gcal-oauth-state';
 
 function getRedirectUri() {
@@ -48,10 +48,19 @@ export async function handleCallbackHash(hash) {
   return true;
 }
 
+// The connection is only useful if it grants write (events) scope. A token
+// saved under the old readonly scope is treated as not-connected so the user
+// is prompted to re-authorize with the new scope.
+function hasWriteScope(conn) {
+  const s = conn?.scope || '';
+  return s.includes('calendar.events') || s.includes('auth/calendar');
+}
+
 export async function getValidToken() {
   const conn = await getConnection('google_calendar');
   if (!conn) return null;
   if (isExpired(conn)) return null;
+  if (!hasWriteScope(conn)) return null;
   return conn.access_token;
 }
 
@@ -61,7 +70,7 @@ export async function disconnect() {
 
 export async function isConnected() {
   const conn = await getConnection('google_calendar');
-  return !!(conn && !isExpired(conn));
+  return !!(conn && !isExpired(conn) && hasWriteScope(conn));
 }
 
 async function api(path, init = {}) {
@@ -81,7 +90,12 @@ async function api(path, init = {}) {
     err.code = 'reauth';
     throw err;
   }
-  if (!r.ok) throw new Error('google_calendar api: ' + r.status + ' ' + (await r.text()));
+  if (!r.ok) {
+    const err = new Error('google_calendar api: ' + r.status + ' ' + (await r.text()));
+    err.status = r.status;
+    throw err;
+  }
+  if (r.status === 204 || r.headers.get('content-length') === '0') return null;
   return r.json();
 }
 
@@ -128,13 +142,98 @@ export async function listEvents(dateStr) {
       end: endMin,
       title: event.summary || '(제목 없음)',
       description: event.description || '',
-      color: '#9CA3AF',
+      color: colorIdToHex(event.colorId) || '#9CA3AF',
       tasks: [],
       source: 'gcal',
       readOnly: true,
       htmlLink: event.htmlLink || null,
+      googleEventId: event.id,
+      gcalEtag: event.etag || null,
+      gcalUpdated: event.updated || null,
     });
   }
 
   return boxes;
+}
+
+// --- Write API (events.insert / patch / delete) ---
+
+// Convert a box's day + minute offset to an RFC3339 local datetime string.
+// Mirrors listEvents' local-midnight basis.
+function boxTimeToISO(dateStr, minutes) {
+  const [year, month, day] = dateStr.split('-').map(Number);
+  const d = new Date(year, month - 1, day, 0, 0, 0, 0);
+  d.setMinutes(d.getMinutes() + minutes);
+  return d.toISOString();
+}
+
+function eventBody(dateStr, box) {
+  const body = {
+    summary: box.title || '',
+    description: box.description || '',
+    start: { dateTime: boxTimeToISO(dateStr, box.start) },
+    end: { dateTime: boxTimeToISO(dateStr, box.end) },
+  };
+  const colorId = hexToColorId(box.color);
+  if (colorId) body.colorId = colorId;
+  return body;
+}
+
+export async function createEvent(dateStr, box) {
+  return api('/calendars/primary/events', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(eventBody(dateStr, box)),
+  });
+}
+
+export async function updateEvent(eventId, dateStr, box, etag) {
+  return api('/calendars/primary/events/' + encodeURIComponent(eventId), {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(etag ? { 'If-Match': etag } : {}),
+    },
+    body: JSON.stringify(eventBody(dateStr, box)),
+  });
+}
+
+export async function deleteEvent(eventId, etag) {
+  return api('/calendars/primary/events/' + encodeURIComponent(eventId), {
+    method: 'DELETE',
+    headers: { ...(etag ? { 'If-Match': etag } : {}) },
+  });
+}
+
+export async function getEvent(eventId) {
+  return api('/calendars/primary/events/' + encodeURIComponent(eventId));
+}
+
+// --- Color mapping: app hex <-> Google colorId (1..11) ---
+// Google event colors are a fixed palette; we map to the nearest by RGB.
+const GCAL_EVENT_COLORS = {
+  1: '#7986CB', 2: '#33B679', 3: '#8E24AA', 4: '#E67C73', 5: '#F6BF26',
+  6: '#F4511E', 7: '#039BE5', 8: '#616161', 9: '#3F51B5', 10: '#0B8043', 11: '#D50000',
+};
+
+function hexToRgb(hex) {
+  const h = (hex || '').replace('#', '');
+  if (h.length !== 6) return null;
+  return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)];
+}
+
+function hexToColorId(hex) {
+  const rgb = hexToRgb(hex);
+  if (!rgb) return null;
+  let best = null, bestDist = Infinity;
+  for (const [id, chex] of Object.entries(GCAL_EVENT_COLORS)) {
+    const c = hexToRgb(chex);
+    const dist = (c[0] - rgb[0]) ** 2 + (c[1] - rgb[1]) ** 2 + (c[2] - rgb[2]) ** 2;
+    if (dist < bestDist) { bestDist = dist; best = id; }
+  }
+  return best;
+}
+
+function colorIdToHex(colorId) {
+  return colorId ? (GCAL_EVENT_COLORS[colorId] || null) : null;
 }

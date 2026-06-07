@@ -75,7 +75,7 @@ function CustomBgUploader({ C, t, isLoggedIn, customBg, onUploadBg, onClearBg, o
   );
 }
 
-function SectionContent({ section, C, t, lang, setLang, themeId, onChangeTheme, opacity, onChangeOpacity, isLoggedIn, avatarUrl, displayName, email, onGoogleSignIn, onLogout, busy, customBg, onUploadBg, onClearBg, gcalEnabled, onChangeGcalEnabled, customColorMode, onChangeCustomColorMode }) {
+function SectionContent({ section, C, t, lang, setLang, themeId, onChangeTheme, opacity, onChangeOpacity, isLoggedIn, avatarUrl, displayName, email, onGoogleSignIn, onLogout, busy, customBg, onUploadBg, onClearBg, gcalEnabled, onChangeGcalEnabled, gcalSync, onChangeGcalSync, customColorMode, onChangeCustomColorMode }) {
   if (section === 'account') return (
     <div>
       <h2 style={{ fontSize: 18, fontWeight: 700, margin: '0 0 20px', color: C.text }}>{t.account}</h2>
@@ -176,12 +176,12 @@ function SectionContent({ section, C, t, lang, setLang, themeId, onChangeTheme, 
     </div>
   );
   if (section === 'calendar') return (
-    <GcalSection C={C} t={t} gcalEnabled={gcalEnabled} onChangeGcalEnabled={onChangeGcalEnabled} />
+    <GcalSection C={C} t={t} gcalEnabled={gcalEnabled} onChangeGcalEnabled={onChangeGcalEnabled} gcalSync={gcalSync} onChangeGcalSync={onChangeGcalSync} />
   );
   return null;
 }
 
-function GcalSection({ C, t, gcalEnabled, onChangeGcalEnabled }) {
+function GcalSection({ C, t, gcalEnabled, onChangeGcalEnabled, gcalSync, onChangeGcalSync }) {
   const [connected, setConnected] = useState(false);
   const [checking, setChecking] = useState(true);
 
@@ -255,6 +255,29 @@ function GcalSection({ C, t, gcalEnabled, onChangeGcalEnabled }) {
             </button>
           </div>
 
+          {/* Sync (write) toggle */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', backgroundColor: C.hover, borderRadius: 10 }}>
+            <div style={{ flex: 1, paddingRight: 12 }}>
+              <div style={{ fontSize: 13, color: C.text, fontWeight: 500 }}>{t.calendarSync}</div>
+              <div style={{ fontSize: 11, color: C.textMid, marginTop: 2, lineHeight: 1.4 }}>{t.calendarSyncDesc}</div>
+            </div>
+            <button
+              onClick={() => onChangeGcalSync && onChangeGcalSync(!gcalSync)}
+              style={{
+                width: 44, height: 24, borderRadius: 12,
+                backgroundColor: gcalSync ? C.accent : C.borderStrong,
+                border: 'none', cursor: 'pointer', position: 'relative',
+                transition: 'background-color 0.2s', flexShrink: 0,
+              }}
+            >
+              <div style={{
+                position: 'absolute', top: 3, left: gcalSync ? 23 : 3,
+                width: 18, height: 18, borderRadius: '50%', backgroundColor: '#fff',
+                transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+              }} />
+            </button>
+          </div>
+
           {/* Disconnect */}
           <button
             onClick={handleDisconnect}
@@ -276,7 +299,7 @@ function GcalSection({ C, t, gcalEnabled, onChangeGcalEnabled }) {
   );
 }
 
-export default function SettingsPanel({ isOpen, onClose, themeId, onChangeTheme, opacity, onChangeOpacity, C, customBg, onUploadBg, onClearBg, gcalEnabled, onChangeGcalEnabled, customColorMode, onChangeCustomColorMode }) {
+export default function SettingsPanel({ isOpen, onClose, themeId, onChangeTheme, opacity, onChangeOpacity, C, customBg, onUploadBg, onClearBg, gcalEnabled, onChangeGcalEnabled, gcalSync, onChangeGcalSync, customColorMode, onChangeCustomColorMode }) {
   const { t, lang, setLang } = useI18n();
   const mobile = useMobile();
   const MENU = [
@@ -306,7 +329,7 @@ export default function SettingsPanel({ isOpen, onClose, themeId, onChangeTheme,
   const onGoogleSignIn = async () => { setBusy(true); try { await signInWithGoogle(); } catch (e) { console.error(e); } finally { setBusy(false); } };
   const onLogout = async () => { setBusy(true); try { await signOut(); window.location.reload(); } finally { setBusy(false); } };
 
-  const sectionProps = { C, t, lang, setLang, themeId, onChangeTheme, opacity, onChangeOpacity, isLoggedIn, avatarUrl, displayName, email, onGoogleSignIn, onLogout, busy, customBg, onUploadBg, onClearBg, gcalEnabled, onChangeGcalEnabled, customColorMode, onChangeCustomColorMode };
+  const sectionProps = { C, t, lang, setLang, themeId, onChangeTheme, opacity, onChangeOpacity, isLoggedIn, avatarUrl, displayName, email, onGoogleSignIn, onLogout, busy, customBg, onUploadBg, onClearBg, gcalEnabled, onChangeGcalEnabled, gcalSync, onChangeGcalSync, customColorMode, onChangeCustomColorMode };
 
   // Mobile: full-screen drill-down
   if (mobile) {

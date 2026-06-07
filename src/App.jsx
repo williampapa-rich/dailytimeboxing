@@ -96,18 +96,21 @@ const getContrastText = (hex) => {
 
 const newId = (p = 'id') => `${p}-${Date.now()}-${Math.random().toString(36).slice(2,6)}`;
 
-// Migrate old slot-based boxes to minute-based
+// Migrate old slot-based boxes to minute-based + default sync fields.
 const migrateBox = (b) => {
-  if (typeof b.start === 'number' && typeof b.end === 'number') return { ...b, done: b.done ?? false };
-  if (typeof b.startSlot === 'number' && typeof b.endSlot === 'number') {
-    return {
-      ...b,
-      start: b.startSlot * MIN_PER_SLOT,
-      end: (b.endSlot + 1) * MIN_PER_SLOT,
-      done: b.done ?? false,
-    };
+  let m = b;
+  if (!(typeof b.start === 'number' && typeof b.end === 'number')
+      && typeof b.startSlot === 'number' && typeof b.endSlot === 'number') {
+    m = { ...b, start: b.startSlot * MIN_PER_SLOT, end: (b.endSlot + 1) * MIN_PER_SLOT };
   }
-  return { ...b, done: b.done ?? false };
+  return {
+    ...m,
+    done: m.done ?? false,
+    googleEventId: m.googleEventId ?? null,
+    gcalEtag: m.gcalEtag ?? null,
+    syncState: m.syncState ?? 'local',
+    lastSyncedAt: m.lastSyncedAt ?? null,
+  };
 };
 
 const URGENT_THRESHOLD_SEC = 300;
@@ -161,10 +164,14 @@ export default function App() {
   });
   const [selectedDate, setSelectedDate] = useState(() => new Date());
   const [boxes, setBoxes] = useState([]);
+  const boxesRef = useRef([]);
+  useEffect(() => { boxesRef.current = boxes; }, [boxes]);
   const [loading, setLoading] = useState(true);
   const [, setTick] = useState(0);
 
   const [gcalEnabled, setGcalEnabled] = useState(false);
+  const [gcalSync, setGcalSync] = useState(false); // push local timeboxes → Google
+  const [gcalReauth, setGcalReauth] = useState(false); // show "reconnect" banner
   const [extEvents, setExtEvents] = useState([]);
 
   const [drag, setDrag] = useState({ anchor: null, current: null, didDrag: false });
@@ -274,6 +281,8 @@ export default function App() {
         if (cm?.value === 'light' || cm?.value === 'dark' || cm?.value === 'auto') setCustomColorMode(cm.value);
         const gcalEn = await window.storage.get('dtb-gcal-enabled');
         if (gcalEn?.value === 'true') setGcalEnabled(true);
+        const gcalSy = await window.storage.get('dtb-gcal-sync');
+        if (gcalSy?.value === 'true') setGcalSync(true);
       } catch (e) {}
       setLoading(false);
     })();
@@ -330,6 +339,78 @@ export default function App() {
     setGcalEnabled(val);
     try { await window.storage.set('dtb-gcal-enabled', String(val)); } catch (e) {}
   };
+
+  const changeGcalSync = async (val) => {
+    setGcalSync(val);
+    try { await window.storage.set('dtb-gcal-sync', String(val)); } catch (e) {}
+    if (val) flushPending();
+  };
+
+  // Persist a metadata patch to a single box WITHOUT triggering another push
+  // (avoids the push→save→push recursion). Uses functional update for freshness.
+  const patchBoxMeta = (boxId, meta) => {
+    setBoxes(prev => {
+      const next = prev.map(b => b.id === boxId ? { ...b, ...meta } : b);
+      window.storage.set(getDateKey(selectedDate), JSON.stringify(next)).catch(() => {});
+      return next;
+    });
+  };
+
+  // Push one box to Google Calendar (create or update). Best-effort/optimistic.
+  const pushBox = async (box) => {
+    if (!gcalSync) return;
+    try {
+      if (!(await gcal.isConnected())) return;
+      const dateStr = toDateString(selectedDate);
+      let res;
+      if (box.googleEventId) {
+        res = await gcal.updateEvent(box.googleEventId, dateStr, box, box.gcalEtag);
+      } else {
+        res = await gcal.createEvent(dateStr, box);
+      }
+      patchBoxMeta(box.id, {
+        googleEventId: res?.id || box.googleEventId || null,
+        gcalEtag: res?.etag || null,
+        syncState: 'synced',
+        lastSyncedAt: new Date().toISOString(),
+      });
+    } catch (e) {
+      if (e?.code === 'reauth') setGcalReauth(true);
+      patchBoxMeta(box.id, { syncState: 'pending' });
+      console.warn('gcal pushBox error:', e);
+    }
+  };
+
+  const pushDelete = async (box) => {
+    if (!gcalSync || !box?.googleEventId) return;
+    try {
+      if (!(await gcal.isConnected())) return;
+      await gcal.deleteEvent(box.googleEventId, box.gcalEtag);
+    } catch (e) {
+      if (e?.code === 'reauth') setGcalReauth(true);
+      console.warn('gcal pushDelete error:', e);
+    }
+  };
+
+  // Retry boxes left in 'pending' (e.g. after reauth / coming back online).
+  const flushPending = async () => {
+    if (!gcalSync) return;
+    if (!(await gcal.isConnected())) return;
+    const pendings = boxesRef.current.filter(b => b.syncState === 'pending' && !b.source);
+    for (const b of pendings) await pushBox(b);
+  };
+
+  // Retry pending pushes when coming back online or refocusing.
+  useEffect(() => {
+    if (!gcalSync) return;
+    const retry = () => flushPending();
+    window.addEventListener('online', retry);
+    window.addEventListener('focus', retry);
+    return () => {
+      window.removeEventListener('online', retry);
+      window.removeEventListener('focus', retry);
+    };
+  }, [gcalSync]);
 
   const changeTheme = async (id) => {
     if (!THEMES[id] && !(id === 'custom' && customBg?.colors)) return;
@@ -665,16 +746,25 @@ export default function App() {
       title: fTitle.trim(),
       description: fDesc.trim(),
       color: fColor,
-      tasks: validTasks
+      tasks: validTasks,
+      done: editing?.done ?? false,
+      // Preserve link to an existing Google event when editing.
+      googleEventId: editing?.googleEventId ?? null,
+      gcalEtag: editing?.gcalEtag ?? null,
+      lastSyncedAt: editing?.lastSyncedAt ?? null,
+      syncState: gcalSync ? 'pending' : (editing?.syncState ?? 'local'),
     };
     save(editing ? boxes.map(b => b.id === editing.id ? nb : b) : [...boxes, nb]);
     closeEdit();
+    if (gcalSync) pushBox(nb);
   };
 
   const doDelete = () => {
     if (!editing) return;
+    const removed = editing;
     save(boxes.filter(b => b.id !== editing.id));
     closeEdit();
+    if (gcalSync) pushDelete(removed);
   };
 
   // Task helpers
@@ -812,6 +902,13 @@ export default function App() {
 
   return (
     <div className="dtb-root" onClick={() => fabOpen && setFabOpen(false)} style={{ height: '100dvh', display: 'flex', flexDirection: 'column', overflow: mode === 'view' ? 'auto' : 'hidden', backgroundColor: C.bg, color: C.text, colorScheme: C.scheme, position: 'relative', opacity: loading ? 0 : 1, transition: 'opacity 0.4s ease' }}>
+      {gcalReauth && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, padding: '8px 16px', backgroundColor: C.indicator, color: '#fff', fontSize: 13, fontWeight: 600 }}>
+          <span>{t.calendarReauth}</span>
+          <button onClick={() => { gcal.beginAuth(); }} style={{ padding: '4px 12px', borderRadius: 6, border: '1px solid rgba(255,255,255,0.6)', background: 'transparent', color: '#fff', cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>{t.calendarConnect}</button>
+          <button onClick={() => setGcalReauth(false)} aria-label={t.close || 'Close'} style={{ background: 'transparent', border: 'none', color: '#fff', cursor: 'pointer', display: 'flex' }}><X size={16} /></button>
+        </div>
+      )}
       {/* Background image */}
       <div style={{
         position: 'fixed', inset: 0, zIndex: 0,
@@ -1212,7 +1309,7 @@ export default function App() {
         </div>
       </div>
 
-      <SettingsPanel isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} themeId={themeId} onChangeTheme={changeTheme} opacity={opacity} onChangeOpacity={changeOpacity} C={C} customBg={customBg} onUploadBg={uploadBg} onClearBg={clearBg} isAnonymous={isAnonymous} authLoaded={authLoaded} gcalEnabled={gcalEnabled} onChangeGcalEnabled={changeGcalEnabled} customColorMode={customColorMode} onChangeCustomColorMode={changeCustomColorMode} />
+      <SettingsPanel isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} themeId={themeId} onChangeTheme={changeTheme} opacity={opacity} onChangeOpacity={changeOpacity} C={C} customBg={customBg} onUploadBg={uploadBg} onClearBg={clearBg} isAnonymous={isAnonymous} authLoaded={authLoaded} gcalEnabled={gcalEnabled} onChangeGcalEnabled={changeGcalEnabled} gcalSync={gcalSync} onChangeGcalSync={changeGcalSync} customColorMode={customColorMode} onChangeCustomColorMode={changeCustomColorMode} />
       <Tutorial isOpen={tutorialOpen} onClose={() => setTutorialOpen(false)} C={C} mode={mode} setMode={setMode} setFabOpen={setFabOpen} />
     </div>
   );
