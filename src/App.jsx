@@ -169,8 +169,7 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [, setTick] = useState(0);
 
-  const [gcalEnabled, setGcalEnabled] = useState(false);
-  const [gcalSync, setGcalSync] = useState(false); // push local timeboxes → Google
+  const [gcalSync, setGcalSync] = useState(false); // unified two-way sync (read + write)
   const [gcalReauth, setGcalReauth] = useState(false); // show "reconnect" banner
   const [extEvents, setExtEvents] = useState([]);
 
@@ -279,10 +278,10 @@ export default function App() {
         if (t?.value && (THEMES[t.value] || (t.value === 'custom' && parsedBg))) setThemeId(t.value);
         const cm = await window.storage.get('dtb-custom-colormode');
         if (cm?.value === 'light' || cm?.value === 'dark' || cm?.value === 'auto') setCustomColorMode(cm.value);
-        const gcalEn = await window.storage.get('dtb-gcal-enabled');
-        if (gcalEn?.value === 'true') setGcalEnabled(true);
+        // Unified two-way sync flag. Migrate legacy 'enabled'(read) into 'sync'.
         const gcalSy = await window.storage.get('dtb-gcal-sync');
-        if (gcalSy?.value === 'true') setGcalSync(true);
+        const gcalEn = await window.storage.get('dtb-gcal-enabled');
+        if (gcalSy?.value === 'true' || gcalEn?.value === 'true') setGcalSync(true);
       } catch (e) {}
       setLoading(false);
     })();
@@ -303,7 +302,7 @@ export default function App() {
   }, [selectedDate]);
 
   const loadExtEvents = useCallback(async (signal) => {
-    if (!gcalEnabled) { setExtEvents([]); return; }
+    if (!gcalSync) { setExtEvents([]); return; }
     try {
       const connected = await gcal.isConnected();
       if (!connected) { setExtEvents([]); return; }
@@ -315,7 +314,7 @@ export default function App() {
         console.warn('gcal listEvents error:', e);
       }
     }
-  }, [gcalEnabled, selectedDate]);
+  }, [gcalSync, selectedDate]);
 
   useEffect(() => {
     const signal = { cancelled: false };
@@ -325,7 +324,7 @@ export default function App() {
 
   // Refresh from Google Calendar when the window/tab regains focus.
   useEffect(() => {
-    if (!gcalEnabled) return;
+    if (!gcalSync) return;
     const onFocus = () => { if (document.visibilityState !== 'hidden') loadExtEvents(); };
     window.addEventListener('focus', onFocus);
     document.addEventListener('visibilitychange', onFocus);
@@ -333,12 +332,7 @@ export default function App() {
       window.removeEventListener('focus', onFocus);
       document.removeEventListener('visibilitychange', onFocus);
     };
-  }, [gcalEnabled, loadExtEvents]);
-
-  const changeGcalEnabled = async (val) => {
-    setGcalEnabled(val);
-    try { await window.storage.set('dtb-gcal-enabled', String(val)); } catch (e) {}
-  };
+  }, [gcalSync, loadExtEvents]);
 
   const changeGcalSync = async (val) => {
     setGcalSync(val);
@@ -1309,7 +1303,7 @@ export default function App() {
         </div>
       </div>
 
-      <SettingsPanel isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} themeId={themeId} onChangeTheme={changeTheme} opacity={opacity} onChangeOpacity={changeOpacity} C={C} customBg={customBg} onUploadBg={uploadBg} onClearBg={clearBg} isAnonymous={isAnonymous} authLoaded={authLoaded} gcalEnabled={gcalEnabled} onChangeGcalEnabled={changeGcalEnabled} gcalSync={gcalSync} onChangeGcalSync={changeGcalSync} customColorMode={customColorMode} onChangeCustomColorMode={changeCustomColorMode} />
+      <SettingsPanel isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} themeId={themeId} onChangeTheme={changeTheme} opacity={opacity} onChangeOpacity={changeOpacity} C={C} customBg={customBg} onUploadBg={uploadBg} onClearBg={clearBg} isAnonymous={isAnonymous} authLoaded={authLoaded} gcalSync={gcalSync} onChangeGcalSync={changeGcalSync} customColorMode={customColorMode} onChangeCustomColorMode={changeCustomColorMode} />
       <Tutorial isOpen={tutorialOpen} onClose={() => setTutorialOpen(false)} C={C} mode={mode} setMode={setMode} setFabOpen={setFabOpen} />
     </div>
   );
