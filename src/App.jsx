@@ -306,8 +306,42 @@ export default function App() {
     try {
       const connected = await gcal.isConnected();
       if (!connected) { setExtEvents([]); return; }
-      const events = await gcal.listEvents(toDateString(selectedDate));
-      if (!signal?.cancelled) setExtEvents(events);
+      const dateStr = toDateString(selectedDate);
+      const events = await gcal.listEvents(dateStr);
+      if (signal?.cancelled) return;
+
+      // Reconcile boxes that are linked to a Google event (googleEventId).
+      const byGid = new Map(events.map(e => [e.googleEventId, e]));
+      const linked = boxesRef.current.filter(b => b.googleEventId && !b.source);
+      let nextBoxes = boxesRef.current;
+      let changed = false;
+      for (const b of linked) {
+        const ev = byGid.get(b.googleEventId);
+        if (!ev) {
+          // Deleted on Google → remove the linked local box (only if not mid-edit).
+          if (b.syncState !== 'pending') {
+            nextBoxes = nextBoxes.filter(x => x.id !== b.id);
+            changed = true;
+          }
+        } else if (b.syncState !== 'pending' && ev.gcalEtag && ev.gcalEtag !== b.gcalEtag) {
+          // Changed on Google → pull the new values into the local box.
+          nextBoxes = nextBoxes.map(x => x.id !== b.id ? x : {
+            ...x, start: ev.start, end: ev.end, title: ev.title,
+            description: ev.description, color: ev.color,
+            gcalEtag: ev.gcalEtag, syncState: 'synced', lastSyncedAt: new Date().toISOString(),
+          });
+          changed = true;
+        }
+      }
+      if (changed && !signal?.cancelled) {
+        setBoxes(nextBoxes);
+        window.storage.set(getDateKey(selectedDate), JSON.stringify(nextBoxes)).catch(() => {});
+      }
+
+      // Read-only overlay = Google events NOT already linked to a local box (no dupes).
+      const linkedGids = new Set(boxesRef.current.filter(b => b.googleEventId).map(b => b.googleEventId));
+      const overlay = events.filter(e => !linkedGids.has(e.googleEventId));
+      if (!signal?.cancelled) setExtEvents(overlay);
     } catch (e) {
       if (!signal?.cancelled) {
         setExtEvents([]);
