@@ -1,5 +1,5 @@
 import { useState, useEffect, useLayoutEffect, useRef, useCallback } from "react";
-import { Pencil, Eye, Trash2, Plus, Save, Check, X, ChevronLeft, ChevronRight, Calendar, MoreHorizontal } from "lucide-react";
+import { Pencil, Eye, Trash2, Plus, Save, Check, X, ChevronLeft, ChevronRight, Calendar, MoreHorizontal, Download } from "lucide-react";
 import { Settings, Share2, Link, MessageCircle, HelpCircle, Maximize, Minimize, BarChart3 } from 'lucide-react';
 import SettingsPanel from "./SettingsPanel.jsx";
 import { StatsView } from "./StatsPanel.jsx";
@@ -536,6 +536,31 @@ export default function App() {
         : [{ id: newId('t'), text: '', done: false }]
     );
     setError('');
+  };
+
+  // Import a read-only Google event into the local timeline as an editable box,
+  // carrying its googleEventId/etag so a later save PATCHes the same GC event.
+  // Then open the editor on it.
+  const importAndEdit = (extBox) => {
+    const nb = {
+      id: newId('tb'),
+      start: extBox.start,
+      end: extBox.end,
+      title: extBox.title || '',
+      description: extBox.description || '',
+      color: extBox.color || CLAUDE_COLORS[0],
+      tasks: [],
+      done: false,
+      googleEventId: extBox.googleEventId || null,
+      gcalEtag: extBox.gcalEtag || null,
+      lastSyncedAt: new Date().toISOString(),
+      syncState: 'synced',
+    };
+    // Add to boxes; the dedup filter in loadExtEvents will drop it from extEvents
+    // on the next poll, but remove it now for an immediate, flicker-free swap.
+    save([...boxes, nb]);
+    setExtEvents(prev => prev.filter(e => e.googleEventId !== nb.googleEventId));
+    openEdit(nb);
   };
 
   const closeEdit = () => {
@@ -1140,6 +1165,7 @@ export default function App() {
             C={C}
             boxes={boxes}
             extEvents={extEvents}
+            onImportEvent={importAndEdit}
             isViewingToday={isToday(selectedDate)}
             displayRange={displayRange}
             rangeConflicts={rangeConflicts}
@@ -1356,7 +1382,7 @@ export default function App() {
 }
 
 function EditView({
-  t, C, boxes, extEvents, isViewingToday, displayRange, rangeConflicts, onSlotDown, onSlotEnter, onSlotLeave, onBoxMouseDown, boxDrag,
+  t, C, boxes, extEvents, onImportEvent, isViewingToday, displayRange, rangeConflicts, onSlotDown, onSlotEnter, onSlotLeave, onBoxMouseDown, boxDrag,
   sel, editing, fTitle, setFTitle, fDesc, setFDesc, fColor, setFColor,
   fStart, setFStart, fEnd, setFEnd,
   fTasks, addTask, addTaskAfter, updateTaskText, toggleTask, removeTask,
@@ -1552,6 +1578,9 @@ function EditView({
               return (
                 <div
                   key={box.id}
+                  onMouseDown={(e) => e.stopPropagation()}
+                  onClick={(e) => { e.stopPropagation(); onImportEvent && onImportEvent(box); }}
+                  title={t.importEvent}
                   style={{
                     position: 'absolute',
                     top, height, left: boxLeft, right: ROW_HORIZONTAL_MARGIN,
@@ -1560,7 +1589,7 @@ function EditView({
                     borderRadius: 6,
                     padding: '8px 12px',
                     boxShadow: '0 1px 2px rgba(0,0,0,0.12)',
-                    cursor: 'default',
+                    cursor: 'pointer',
                     overflow: 'hidden',
                     zIndex: 9,
                     opacity: 0.85,
@@ -1575,6 +1604,13 @@ function EditView({
                   </div>
                   <div style={{ fontWeight: 700, fontSize: 13, lineHeight: 1.25, marginTop: 2, paddingRight: 14 }}>
                     {box.title}
+                  </div>
+                  <div style={{
+                    position: 'absolute', bottom: 4, right: 6,
+                    fontSize: 9, fontWeight: 600, opacity: 0.85,
+                    display: 'flex', alignItems: 'center', gap: 3,
+                  }}>
+                    <Download size={9} /> {t.importEvent}
                   </div>
                 </div>
               );
