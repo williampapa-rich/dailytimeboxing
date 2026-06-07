@@ -293,25 +293,38 @@ export default function App() {
     return () => { cancelled = true; };
   }, [selectedDate]);
 
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      if (!gcalEnabled) { setExtEvents([]); return; }
-      try {
-        const connected = await gcal.isConnected();
-        if (!connected) { setExtEvents([]); return; }
-        const dateStr = toDateString(selectedDate);
-        const events = await gcal.listEvents(dateStr);
-        if (!cancelled) setExtEvents(events);
-      } catch (e) {
-        if (!cancelled) {
-          setExtEvents([]);
-          console.warn('gcal listEvents error:', e);
-        }
+  const loadExtEvents = useCallback(async (signal) => {
+    if (!gcalEnabled) { setExtEvents([]); return; }
+    try {
+      const connected = await gcal.isConnected();
+      if (!connected) { setExtEvents([]); return; }
+      const events = await gcal.listEvents(toDateString(selectedDate));
+      if (!signal?.cancelled) setExtEvents(events);
+    } catch (e) {
+      if (!signal?.cancelled) {
+        setExtEvents([]);
+        console.warn('gcal listEvents error:', e);
       }
-    })();
-    return () => { cancelled = true; };
-  }, [selectedDate, gcalEnabled]);
+    }
+  }, [gcalEnabled, selectedDate]);
+
+  useEffect(() => {
+    const signal = { cancelled: false };
+    loadExtEvents(signal);
+    return () => { signal.cancelled = true; };
+  }, [loadExtEvents]);
+
+  // Refresh from Google Calendar when the window/tab regains focus.
+  useEffect(() => {
+    if (!gcalEnabled) return;
+    const onFocus = () => { if (document.visibilityState !== 'hidden') loadExtEvents(); };
+    window.addEventListener('focus', onFocus);
+    document.addEventListener('visibilitychange', onFocus);
+    return () => {
+      window.removeEventListener('focus', onFocus);
+      document.removeEventListener('visibilitychange', onFocus);
+    };
+  }, [gcalEnabled, loadExtEvents]);
 
   const changeGcalEnabled = async (val) => {
     setGcalEnabled(val);
