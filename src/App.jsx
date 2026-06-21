@@ -106,6 +106,7 @@ const migrateBox = (b) => {
   return {
     ...m,
     done: m.done ?? false,
+    focusRate: m.focusRate ?? null,
     googleEventId: m.googleEventId ?? null,
     gcalEtag: m.gcalEtag ?? null,
     syncState: m.syncState ?? 'local',
@@ -114,6 +115,15 @@ const migrateBox = (b) => {
 };
 
 const URGENT_THRESHOLD_SEC = 300;
+
+// 종료 회고 집중도 선택지 (신호등 의미색 — CLAUDE_COLORS와 별개). 라벨은 i18n.
+const FOCUS_OPTIONS = [
+  { rate: 90, color: '#22C55E' }, // 🟢 거의 온전히 집중
+  { rate: 70, color: '#EAB308' }, // 🟡 중간중간 끊김
+  { rate: 50, color: '#F97316' }, // 🟠 절반쯤 집중
+  { rate: 25, color: '#EF4444' }, // 🔴 거의 집중 못 함
+];
+const focusColor = (rate) => FOCUS_OPTIONS.find(o => o.rate === rate)?.color || null;
 
 const getTimerInfo = (boxes) => {
   const nowMin = getCurrentMin();
@@ -177,6 +187,8 @@ export default function App() {
   const [gcalReauth, setGcalReauth] = useState(false); // show "reconnect" banner
   // Two-way conflict: { box, remote } — local edit collided with a Google edit.
   const [gcalConflict, setGcalConflict] = useState(null);
+  // 종료 회고 모달: null이면 닫힘, box 객체면 그 박스에 대한 집중도 회고 표시.
+  const [focusReviewBox, setFocusReviewBox] = useState(null);
   const [extEvents, setExtEvents] = useState([]);
 
   const [drag, setDrag] = useState({ anchor: null, current: null, didDrag: false });
@@ -204,6 +216,9 @@ export default function App() {
   const progRef = useRef(0);
   const [cw, setCw] = useState(0);
   const alertedRef = useRef({});
+  // 종료 회고 자동 트리거용: 마운트/날짜전환 시점 cutoff(분) + box별 1회 플래그.
+  const reviewBaselineRef = useRef(null);
+  const reviewedRef = useRef({});
 
   const measureView = useCallback(() => {
     const el = viewElRef.current;
@@ -570,6 +585,31 @@ export default function App() {
     } catch (e) {}
   });
 
+  // 종료 회고 자동 트리거 baseline·플래그 리셋(마운트/날짜 전환 시).
+  useEffect(() => {
+    reviewBaselineRef.current = getCurrentMin();
+    reviewedRef.current = {};
+  }, [selectedDate]);
+
+  // 오늘 보는 중, 실시간으로 막 끝난 박스 1개에 대해 회고 팝업 1회 표시.
+  // deps 없음 → 매초 tick 리렌더마다 평가(알림 useEffect와 동일 컨벤션).
+  useEffect(() => {
+    if (!isToday(selectedDate)) return;     // 오늘만 자동 팝업
+    if (focusReviewBox) return;             // 모달 떠 있으면 중복/무한루프 방지
+    const baseline = reviewBaselineRef.current;
+    if (baseline == null) return;
+    const now = getCurrentMin();
+    const justEnded = boxes.find(b =>
+      b.focusRate == null &&
+      b.end > baseline &&   // 앱 켤 때 이미 끝나 있던 과거 박스 제외
+      b.end <= now &&       // 지금 막 끝남
+      !reviewedRef.current[b.id]
+    );
+    if (!justEnded) return;
+    reviewedRef.current[justEnded.id] = true; // box별 1회만
+    setFocusReviewBox(justEnded);
+  });
+
   const save = async (b) => {
     setBoxes(b);
     try { await window.storage.set(getDateKey(selectedDate), JSON.stringify(b)); } catch (e) {}
@@ -916,7 +956,17 @@ export default function App() {
   };
 
   const toggleBoxDone = (boxId) => {
+    const target = boxes.find(b => b.id === boxId);
+    const turningOn = target && !target.done; // false→true 전환만
     save(boxes.map(b => b.id !== boxId ? b : { ...b, done: !b.done }));
+    // 완료로 켜는 순간 회고 팝업(비차단). 이미 기록 있으면 안 띄움.
+    if (turningOn && target.focusRate == null) setFocusReviewBox(target);
+  };
+
+  // 집중도 즉시 저장 후 모달 닫기. save()가 setBoxes+storage.set 수행.
+  const setFocusRate = (boxId, rate) => {
+    save(boxes.map(b => b.id !== boxId ? b : { ...b, focusRate: rate }));
+    setFocusReviewBox(null);
   };
 
   const openStats = () => {
@@ -1056,6 +1106,40 @@ export default function App() {
                 <button onClick={() => resolveConflict('mine')} style={{ flex: 1, padding: '11px 12px', borderRadius: 10, border: 'none', backgroundColor: C.accent, color: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>{t.conflictKeepMine}</button>
                 <button onClick={() => resolveConflict('theirs')} style={{ flex: 1, padding: '11px 12px', borderRadius: 10, border: 'none', backgroundColor: C.cardAlt, color: C.text, fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>{t.conflictUseTheirs}</button>
               </div>
+            </div>
+          </div>
+        );
+      })()}
+      {focusReviewBox && (() => {
+        const box = focusReviewBox;
+        return (
+          <div style={{ position: 'fixed', inset: 0, zIndex: 400, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.45)', padding: 16 }}
+               onClick={() => setFocusReviewBox(null)}>
+            <div onClick={(e) => e.stopPropagation()} style={{ width: '100%', maxWidth: 440, backgroundColor: C.card, borderRadius: 16, padding: 20, boxShadow: '0 12px 40px rgba(0,0,0,0.3)', marginBottom: 'env(safe-area-inset-bottom)' }}>
+              <div style={{ fontSize: 16, fontWeight: 700, color: C.text, marginBottom: 6 }}>{t.focusReviewTitle}</div>
+              <div style={{ fontSize: 13, color: C.textMid, marginBottom: 16, lineHeight: 1.4 }}>{t.focusReviewDesc}</div>
+              <div style={{ display: 'flex', gap: 10, marginBottom: 14 }}>
+                {FOCUS_OPTIONS.map(opt => {
+                  const selected = box.focusRate === opt.rate;
+                  return (
+                    <button key={opt.rate} type="button"
+                      onClick={() => setFocusRate(box.id, opt.rate)}
+                      style={{ flex: 1, minHeight: 80, padding: '12px 8px', borderRadius: 12,
+                        border: selected ? `2px solid ${opt.color}` : `1px solid ${C.cardAlt}`,
+                        backgroundColor: selected ? C.cardAlt : 'transparent',
+                        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6,
+                        cursor: 'pointer' }}>
+                      <span style={{ width: 18, height: 18, borderRadius: '50%', backgroundColor: opt.color, flexShrink: 0 }} />
+                      <span className="dtb-tnum" style={{ fontSize: 13, fontWeight: 700, color: C.text }}>{opt.rate}%</span>
+                      <span style={{ fontSize: 10, color: C.textMid, textAlign: 'center', lineHeight: 1.2 }}>{t.focusLabels[opt.rate]}</span>
+                    </button>
+                  );
+                })}
+              </div>
+              <button type="button" onClick={() => setFocusReviewBox(null)}
+                style={{ width: '100%', padding: '10px', background: 'transparent', border: 'none', color: C.textMid, fontSize: 13, cursor: 'pointer' }}>
+                {t.focusReviewSkip}
+              </button>
             </div>
           </div>
         );
@@ -1294,6 +1378,7 @@ export default function App() {
             onUserScroll={onUserScroll}
             toggleTaskInBox={toggleTaskInBox}
             toggleBoxDone={toggleBoxDone}
+            onReviewBox={setFocusReviewBox}
             isViewingToday={isToday(selectedDate)}
             selectedDate={selectedDate}
           />
@@ -1981,7 +2066,7 @@ function EditView({
   );
 }
 
-function ViewMode({ t, C, viewRef, boxes, extEvents, sw, tw, onScroll, onUserScroll, toggleTaskInBox, toggleBoxDone, isViewingToday, selectedDate }) {
+function ViewMode({ t, C, viewRef, boxes, extEvents, sw, tw, onScroll, onUserScroll, toggleTaskInBox, toggleBoxDone, onReviewBox, isViewingToday, selectedDate }) {
   const timer = isViewingToday ? getTimerInfo(boxes) : { type: 'idle' };
   const urgent = !!timer.urgent && (timer.type === 'current' || timer.type === 'next');
   const urgentColor = C.indicator;
@@ -2266,6 +2351,24 @@ function ViewMode({ t, C, viewRef, boxes, extEvents, sw, tw, onScroll, onUserScr
                         {box.done && <Check size={11} color={box.color} strokeWidth={3} />}
                       </button>
                     )}
+                    {showDoneBtn && (() => {
+                      const fc = focusColor(box.focusRate);
+                      return (
+                        <button
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); onReviewBox(box); }}
+                          title={t.focusReviewDotTitle}
+                          style={{
+                            position: 'absolute', bottom: 6, left: 8,
+                            width: 14, height: 14, borderRadius: '50%',
+                            border: fc ? 'none' : `1.5px dashed ${txt}`,
+                            backgroundColor: fc || 'transparent',
+                            opacity: fc ? 1 : 0.55,
+                            cursor: 'pointer', padding: 0, flexShrink: 0,
+                          }}
+                        />
+                      );
+                    })()}
                   </div>
                 );
               })}
