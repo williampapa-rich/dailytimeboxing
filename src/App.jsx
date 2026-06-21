@@ -2324,7 +2324,7 @@ function ViewMode({ t, C, viewRef, boxes, extEvents, sw, tw, onScroll, onUserScr
                     <div className="dtb-tnum" style={{ fontSize: 9, opacity: 0.9, lineHeight: 1.2, fontWeight: 500 }}>
                       {formatRange(box.start, box.end)}
                     </div>
-                    <div style={{ fontWeight: 700, fontSize: 12, marginTop: 2, lineHeight: 1.25, paddingRight: showDoneBtn ? 20 : 0 }}>{box.title}</div>
+                    <div style={{ fontWeight: 700, fontSize: 12, marginTop: 2, lineHeight: 1.25, paddingRight: showDoneBtn ? 44 : 0 }}>{box.title}</div>
                     {taskCount > 0 && (
                       <div className="dtb-tnum" style={{ fontSize: 10, opacity: 0.9, fontWeight: 600, marginTop: 3 }}>
                         ☐ {doneCount}/{taskCount}
@@ -2359,7 +2359,7 @@ function ViewMode({ t, C, viewRef, boxes, extEvents, sw, tw, onScroll, onUserScr
                           onClick={(e) => { e.stopPropagation(); onReviewBox(box); }}
                           title={t.focusReviewDotTitle}
                           style={{
-                            position: 'absolute', bottom: 6, left: 8,
+                            position: 'absolute', top: 8, right: 30,
                             width: 14, height: 14, borderRadius: '50%',
                             border: fc ? 'none' : `1.5px dashed ${txt}`,
                             backgroundColor: fc || 'transparent',
