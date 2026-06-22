@@ -29,7 +29,10 @@ function fmtDuration(ms) {
 const SPOTIFY_GREEN = '#1DB954';
 
 function isMobile() {
-  return typeof window !== 'undefined' && window.matchMedia('(max-width: 768px)').matches;
+  // 실제 모바일 OS(임베드 플레이어 백그라운드 재생 제약)인지로 판별.
+  // 화면 너비로 보면 창을 좁힌 PC가 모바일로 오판됨.
+  if (typeof navigator === 'undefined') return false;
+  return /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 }
 
 export default function MusicPlayer({ appColors }) {
